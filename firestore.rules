@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /profile/{profileId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    match /documents/{docId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+
+      match /chunks/{chunkId} {
+        allow read: if isSignedIn()
+          && get(/databases/$(database)/documents/documents/$(docId)).data.uid == request.auth.uid;
+        allow write: if false;
+      }
+
+      match /chats/{chatId} {
+        allow read: if isSignedIn()
+          && get(/databases/$(database)/documents/documents/$(docId)).data.uid == request.auth.uid;
+        allow write: if false;
+
+        match /messages/{messageId} {
+          allow read: if isSignedIn()
+            && get(/databases/$(database)/documents/documents/$(docId)).data.uid == request.auth.uid;
+          allow write: if false;
+        }
+      }
+
+      match /feedback/{feedbackId} {
+        allow read: if isSignedIn()
+          && get(/databases/$(database)/documents/documents/$(docId)).data.uid == request.auth.uid;
+        allow write: if false;
+      }
+    }
+  }
+}
