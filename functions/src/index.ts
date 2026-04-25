@@ -45,4 +45,5 @@ export const retryDocumentProcessing = onCall<
 });
 
 export { chatWithDocument } from "./chat";
+export { quickChat } from "./quickChat";
 export { saveFeedback } from "./profileFeedback";

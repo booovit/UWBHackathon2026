@@ -23,6 +23,19 @@ export const callChatWithDocument = httpsCallable<ChatRequest, ChatResponse>(
   "chatWithDocument",
 );
 
+export interface QuickChatRequest {
+  message: string;
+}
+
+export interface QuickChatResponse {
+  content: string;
+}
+
+export const callQuickChat = httpsCallable<QuickChatRequest, QuickChatResponse>(
+  functions,
+  "quickChat",
+);
+
 export interface RetryRequest {
   docId: string;
 }

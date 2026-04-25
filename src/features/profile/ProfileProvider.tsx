@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, firebaseConfigured } from "@/lib/firebase";
 import { defaultProfile, type UserProfile } from "@/types/profile";
 import { useAuth } from "@/features/auth/AuthProvider";
 
@@ -28,7 +28,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !firebaseConfigured) {
       setProfile(defaultProfile);
       setLoading(false);
       return;
@@ -53,7 +53,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const saveProfile = useCallback(
     async (next: Partial<UserProfile>) => {
       if (!user) throw new Error("Not signed in");
-      const merged: UserProfile = {
+      const mergedLocal: UserProfile = {
         ...defaultProfile,
         ...profile,
         ...next,
@@ -71,9 +71,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           ...(next.feedbackSignals ?? {}),
         },
       };
+      if (!firebaseConfigured) {
+        setProfile(mergedLocal);
+        return;
+      }
       await setDoc(
         doc(db, "users", user.uid, "profile", "main"),
-        { ...merged, updatedAt: serverTimestamp() },
+        { ...mergedLocal, updatedAt: serverTimestamp() },
         { merge: true },
       );
     },
