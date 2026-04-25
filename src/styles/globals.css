@@ -249,21 +249,6 @@ legend {
   border: 0;
 }
 
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 8px;
-  background: var(--color-primary);
-  color: var(--color-primary-contrast);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  z-index: 1000;
-}
-
-.skip-link:focus-visible {
-  top: 8px;
-}
-
 .button {
   display: inline-flex;
   align-items: center;
@@ -805,4 +790,83 @@ legend {
   background: var(--color-surface);
   color: var(--color-text);
   box-shadow: 0 0 0 1px var(--color-border-strong);
+}
+
+[data-large-print="true"] .app-header {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+}
+
+[data-large-print="true"] .app-header .brand {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  min-height: 42px;
+}
+
+[data-large-print="true"] .header-nav {
+  flex: 1 1 520px;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+[data-large-print="true"] .app-header .button,
+[data-large-print="true"] .app-header .badge,
+[data-large-print="true"] .app-header .muted,
+[data-large-print="true"] .big-font-toggle,
+[data-large-print="true"] .theme-toggle button {
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+
+[data-large-print="true"] .app-header .button,
+[data-large-print="true"] .app-header .badge,
+[data-large-print="true"] .big-font-toggle,
+[data-large-print="true"] .theme-toggle button {
+  min-height: 42px;
+  padding: var(--space-2) var(--space-3);
+}
+
+[data-large-print="true"] .theme-toggle {
+  align-items: stretch;
+  border-radius: var(--radius-sm);
+  gap: var(--space-1);
+  padding: var(--space-1);
+}
+
+[data-large-print="true"] .theme-toggle button {
+  border-radius: calc(var(--radius-sm) - 2px);
+  white-space: nowrap;
+}
+
+[data-large-print="true"] .app-header .muted {
+  align-self: center;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  [data-large-print="true"] .app-header,
+  [data-large-print="true"] .header-nav,
+  .chat-composer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  [data-large-print="true"] .app-header .brand {
+    min-height: auto;
+  }
+
+  [data-large-print="true"] .theme-toggle {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  [data-large-print="true"] .app-header .button,
+  [data-large-print="true"] .app-header .badge,
+  [data-large-print="true"] .big-font-toggle {
+    justify-content: center;
+  }
 }
