@@ -74,12 +74,17 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
           <div>
             <label htmlFor="font-scale">
               Text size ({profile.uiPreferences.fontScale.toFixed(2)}x)
+              {profile.uiPreferences.fontScale >= 2.0 && (
+                <span className="badge" style={{ marginLeft: 8, verticalAlign: "middle" }}>
+                  Large print
+                </span>
+              )}
             </label>
             <input
               id="font-scale"
               type="range"
               min={0.85}
-              max={1.6}
+              max={3.0}
               step={0.05}
               value={profile.uiPreferences.fontScale}
               onChange={(e) =>
@@ -89,6 +94,11 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
                 })
               }
             />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: 4 }}>
+              <span>Small</span>
+              <span>Normal</span>
+              <span>Large print (visual impairment)</span>
+            </div>
           </div>
           <div>
             <label htmlFor="line-width">Line width</label>
