@@ -9,7 +9,9 @@ export function AccessibilityToolbar() {
   const isLargePrint = ui.fontScale >= LARGE_PRINT_SCALE;
 
   function setUi(next: Partial<typeof ui>) {
-    void saveProfile({ uiPreferences: { ...ui, ...next } });
+    void saveProfile({ uiPreferences: { ...ui, ...next } }).catch((err) => {
+      console.error("Could not save accessibility preferences", err);
+    });
   }
 
   function toggleLargePrint() {

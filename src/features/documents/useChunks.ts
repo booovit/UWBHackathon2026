@@ -6,14 +6,17 @@ import type { DocumentChunk } from "@/types/document";
 export function useChunks(docId: string | undefined) {
   const [chunks, setChunks] = useState<DocumentChunk[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!docId || !firebaseConfigured) {
       setChunks([]);
+      setError(null);
       setLoading(false);
       return;
     }
     setLoading(true);
+    setError(null);
     const q = query(
       collection(db, "documents", docId, "chunks"),
       orderBy("orderIndex", "asc"),
@@ -27,11 +30,15 @@ export function useChunks(docId: string | undefined) {
           ),
         );
         setLoading(false);
+        setError(null);
       },
-      () => setLoading(false),
+      (err) => {
+        setError(err instanceof Error ? err.message : String(err));
+        setLoading(false);
+      },
     );
     return unsub;
   }, [docId]);
 
-  return { chunks, loading };
+  return { chunks, loading, error };
 }

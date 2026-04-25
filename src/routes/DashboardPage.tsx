@@ -1,14 +1,62 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useDocuments } from "@/features/documents/useDocuments";
+import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
+import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
+import { useStudyFolders } from "@/features/library/useStudyFolders";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import { firebaseConfigured } from "@/lib/firebase";
 import type { StudyDocument } from "@/types/document";
+import type { FlashcardDeck } from "@/types/library";
+import type { SavedQuiz } from "@/types/library";
 
 export function DashboardPage() {
-  const { documents, loading } = useDocuments();
-  const { isGuest } = useAuth();
+  const { documents, loading, error: docsError } = useDocuments();
+  const { isGuest, isDemoUser } = useAuth();
   const { profile } = useProfile();
+  const {
+    folders,
+    loading: foldersLoading,
+    error: foldersError,
+    createFolder,
+    addDocumentToFolder,
+    removeDocumentFromFolder,
+    removeFolder,
+  } = useStudyFolders();
+  const {
+    decks,
+    loading: decksLoading,
+    error: decksError,
+    removeDeck,
+  } = useFlashcardDecks();
+  const {
+    quizzes,
+    loading: quizzesLoading,
+    error: quizzesError,
+    removeQuiz,
+  } = useSavedQuizzes();
+
+  const [newFolderName, setNewFolderName] = useState("");
+  const [folderBusy, setFolderBusy] = useState(false);
+  const [addDocByFolder, setAddDocByFolder] = useState<Record<string, string>>(
+    {},
+  );
+
+  async function onCreateFolder() {
+    if (!newFolderName.trim()) return;
+    setFolderBusy(true);
+    try {
+      await createFolder(newFolderName);
+      setNewFolderName("");
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+
+  const docById = Object.fromEntries(
+    documents.map((d) => [d.id, d] as const),
+  ) as Record<string, StudyDocument>;
 
   return (
     <section className="stack" aria-labelledby="library-title">
@@ -23,8 +71,22 @@ export function DashboardPage() {
 
       {!firebaseConfigured && (
         <div className="info-banner" role="status">
-          <strong>Preview mode.</strong> Add <code>.env.local</code> to sync
-          this library with Firebase. Layout below is a preview.
+          <strong>Preview mode.</strong> Folders, flashcards, and quizzes are
+          saved in this browser only. Add <code>.env.local</code> to sync to
+          Firebase.
+        </div>
+      )}
+
+      {isDemoUser && firebaseConfigured && (
+        <div className="info-banner" role="status">
+          <strong>Offline session.</strong> Sign in to sync your library to the
+          cloud, or your library is stored locally in this browser.
+        </div>
+      )}
+
+      {docsError && (
+        <div className="error-banner" role="alert">
+          {docsError}
         </div>
       )}
 
@@ -81,7 +143,12 @@ export function DashboardPage() {
               </Link>
             </li>
             {documents
-              .filter((d) => d.status === "ready" || d.status === "processing")
+              .filter(
+                (d) =>
+                  d.status === "ready" ||
+                  d.status === "processing" ||
+                  d.status === "uploaded",
+              )
               .map((d) => (
                 <li key={d.id}>
                   <Link
@@ -110,19 +177,147 @@ export function DashboardPage() {
             Folders
           </h2>
           <p className="muted" style={{ margin: 0 }}>
-            Organize documents and saved sets into collections.
+            Group documents for quick access.
           </p>
-          <p
-            className="muted"
-            style={{
-              margin: 0,
-              fontSize: "0.9rem",
-              fontStyle: "italic",
-            }}
+          {foldersError && (
+            <p className="error-banner" role="alert" style={{ margin: 0 }}>
+              {foldersError}
+            </p>
+          )}
+
+          <div className="row" style={{ flexWrap: "wrap" }}>
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="New folder name"
+              aria-label="New folder name"
+            />
+            <button
+              type="button"
+              className="button"
+              onClick={() => void onCreateFolder()}
+              disabled={folderBusy || !newFolderName.trim()}
+            >
+              {folderBusy ? "…" : "Create folder"}
+            </button>
+          </div>
+
+          {foldersLoading && (
+            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+              Loading folders…
+            </p>
+          )}
+
+          {!foldersLoading && folders.length === 0 && (
+            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+              No folders yet. Create one, then add documents.
+            </p>
+          )}
+
+          <ul
+            className="stack"
+            style={{ listStyle: "none", padding: 0, gap: "var(--space-2)" }}
           >
-            Coming soon — you will be able to drag chats and materials into
-            folders.
-          </p>
+            {folders.map((f) => (
+              <li key={f.id} className="card" style={{ padding: "var(--space-3)" }}>
+                <div
+                  className="row"
+                  style={{
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    marginBottom: "var(--space-2)",
+                  }}
+                >
+                  <strong>{f.name}</strong>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => void removeFolder(f.id)}
+                  >
+                    Delete folder
+                  </button>
+                </div>
+                {documents.length > 0 && (
+                  <div className="row" style={{ flexWrap: "wrap", alignItems: "center" }}>
+                    <label
+                      className="muted"
+                      style={{ fontSize: "0.9rem" }}
+                      htmlFor={`add-doc-${f.id}`}
+                    >
+                      Add document
+                    </label>
+                    <select
+                      id={`add-doc-${f.id}`}
+                      value={addDocByFolder[f.id] ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          setAddDocByFolder((prev) => ({
+                            ...prev,
+                            [f.id]: "",
+                          }));
+                          return;
+                        }
+                        void (async () => {
+                          await addDocumentToFolder(f.id, val);
+                          setAddDocByFolder((prev) => ({ ...prev, [f.id]: "" }));
+                        })();
+                      }}
+                    >
+                      <option value="">— Select —</option>
+                      {documents
+                        .filter(
+                          (d) =>
+                            !f.documentIds.includes(d.id) &&
+                            d.status !== "failed",
+                        )
+                        .map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.fileName}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                  {f.documentIds.map((id) => {
+                    const d = docById[id];
+                    return (
+                      <li
+                        key={id}
+                        className="row"
+                        style={{ justifyContent: "space-between", marginTop: "6px" }}
+                      >
+                        {d ? (
+                          <Link to={`/study/${id}`}>{d.fileName}</Link>
+                        ) : (
+                          <span className="muted">(removed) {id.slice(0, 6)}</span>
+                        )}
+                        {d && (
+                          <button
+                            type="button"
+                            className="button ghost"
+                            style={{ fontSize: "0.85rem" }}
+                            onClick={() =>
+                              void removeDocumentFromFolder(f.id, id)
+                            }
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {f.documentIds.length === 0 && (
+                  <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+                    No items in this folder.
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
 
@@ -132,15 +327,28 @@ export function DashboardPage() {
             Flashcards
           </h2>
           <p className="muted" style={{ margin: 0 }}>
-            Sets you generate in study mode will appear here for spaced review.
+            Saved from study (Flashcards mode) or this browser in preview.
           </p>
-          <p
-            className="muted"
-            style={{ margin: 0, fontSize: "0.9rem", fontStyle: "italic" }}
-          >
-            None saved yet. Use Flashcards mode from a document in{" "}
-            <Link to="/study">Study</Link>.
-          </p>
+          {decksError && (
+            <p className="error-banner" role="alert" style={{ margin: 0 }}>
+              {decksError}
+            </p>
+          )}
+          {decksLoading && <p className="muted" style={{ margin: 0 }}>Loading…</p>}
+          {!decksLoading && decks.length === 0 && (
+            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+              None yet. In <Link to="/study">Study</Link>, open a document, pick
+              Flashcards mode, then <strong>Save to library</strong> on a tutor
+              reply.
+            </p>
+          )}
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {decks.map((d) => (
+              <li key={d.id}>
+                <FlashcardDeckRow deck={d} onRemove={() => void removeDeck(d.id)} />
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="card stack" aria-labelledby="quizzes-heading">
@@ -148,15 +356,27 @@ export function DashboardPage() {
             Quizzes
           </h2>
           <p className="muted" style={{ margin: 0 }}>
-            Quizzes and practice runs created from your materials.
+            Saved from study (Quiz mode) or this browser in preview.
           </p>
-          <p
-            className="muted"
-            style={{ margin: 0, fontSize: "0.9rem", fontStyle: "italic" }}
-          >
-            None saved yet. Open a document in <Link to="/study">Study</Link> and
-            use Quiz mode in the chat panel.
-          </p>
+          {quizzesError && (
+            <p className="error-banner" role="alert" style={{ margin: 0 }}>
+              {quizzesError}
+            </p>
+          )}
+          {quizzesLoading && <p className="muted" style={{ margin: 0 }}>Loading…</p>}
+          {!quizzesLoading && quizzes.length === 0 && (
+            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+              None yet. In <Link to="/study">Study</Link>, use Quiz mode, then
+              <strong> Save quiz to library</strong> on a reply.
+            </p>
+          )}
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {quizzes.map((q) => (
+              <li key={q.id}>
+                <SavedQuizRow quiz={q} onRemove={() => void removeQuiz(q.id)} />
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
 
@@ -229,6 +449,94 @@ function DocumentRow({ doc }: { doc: StudyDocument }) {
           </Link>
         )}
       </div>
+    </article>
+  );
+}
+
+function FlashcardDeckRow({
+  deck,
+  onRemove,
+}: {
+  deck: FlashcardDeck;
+  onRemove: () => void;
+}) {
+  const preview = deck.cards[0]?.back?.slice(0, 200) ?? "";
+  return (
+    <article
+      className="card"
+      style={{ marginBottom: "var(--space-2)", padding: "var(--space-3)" }}
+    >
+      <div
+        className="row"
+        style={{ justifyContent: "space-between", alignItems: "flex-start" }}
+      >
+        <strong>{deck.title}</strong>
+        <div className="row">
+          {deck.sourceDocId && (
+            <Link to={`/study/${deck.sourceDocId}`} className="button secondary">
+              Source
+            </Link>
+          )}
+          <button type="button" className="button secondary" onClick={onRemove}>
+            Delete
+          </button>
+        </div>
+      </div>
+      {preview && (
+        <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+          {preview}…
+        </p>
+      )}
+    </article>
+  );
+}
+
+function SavedQuizRow({
+  quiz,
+  onRemove,
+}: {
+  quiz: SavedQuiz;
+  onRemove: () => void;
+}) {
+  return (
+    <article
+      className="card"
+      style={{ marginBottom: "var(--space-2)", padding: "var(--space-3)" }}
+    >
+      <div
+        className="row"
+        style={{ justifyContent: "space-between", alignItems: "flex-start" }}
+      >
+        <strong>{quiz.title}</strong>
+        <div className="row">
+          {quiz.sourceDocId && (
+            <Link
+              to={`/study/${quiz.sourceDocId}`}
+              className="button secondary"
+            >
+              Source
+            </Link>
+          )}
+          <button type="button" className="button secondary" onClick={onRemove}>
+            Delete
+          </button>
+        </div>
+      </div>
+      <details style={{ marginTop: "var(--space-2)" }}>
+        <summary>View</summary>
+        <pre
+          className="muted"
+          style={{
+            whiteSpace: "pre-wrap",
+            fontSize: "0.9rem",
+            maxHeight: 220,
+            overflow: "auto",
+            margin: "var(--space-2) 0 0",
+          }}
+        >
+          {quiz.content}
+        </pre>
+      </details>
     </article>
   );
 }
