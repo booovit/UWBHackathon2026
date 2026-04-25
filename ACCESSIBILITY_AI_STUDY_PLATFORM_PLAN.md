@@ -18,6 +18,98 @@ The core product is not a generic chatbot. The app takes the same uploaded mater
 
 The product follows the Universal Design for Learning idea that students benefit from multiple means of representation. The app should support user override at all times because no single mode will work for every user or every context.
 
+## 1.1 Project Setup
+
+### Prerequisites
+
+- Node.js (v18 or higher recommended)
+- npm
+- A Google account for Firebase and Gemini API access
+
+### Step 1: Clone and Install Dependencies
+
+```bash
+git clone <repo-url>
+cd UWBHackathon2026
+npm install
+```
+
+### Step 2: Install Firebase CLI (Global)
+
+```bash
+npm install -g firebase-tools
+```
+
+### Step 3: Install Firebase Client SDK (Frontend)
+
+```bash
+npm install firebase
+```
+
+### Step 4: Login to Firebase
+
+```bash
+firebase login
+```
+
+### Step 5: Initialize Firebase Services (if not already done)
+
+```bash
+firebase init
+```
+
+Select: Firestore, Functions, Storage
+
+### Step 6: Install Backend Dependencies (Cloud Functions)
+
+```bash
+cd functions
+npm install firebase-admin firebase-functions @google/genai pdf-parse mammoth
+```
+
+### API Keys Setup
+
+#### Gemini API Key (Backend)
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Create a new API key
+3. Create file `functions/.secret.local`:
+
+```bash
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+For production:
+
+```bash
+firebase functions:secrets:set GEMINI_API_KEY
+```
+
+#### Firebase Config (Frontend)
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Project Settings (gear icon) → General → Your apps → Web app
+3. Create file `.env.local` in the **root folder**:
+
+```bash
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123:web:abc
+```
+
+### Files to Never Commit
+
+Ensure these are in `.gitignore`:
+
+```
+.env.local
+.env
+functions/.secret.local
+```
+
 ## 2. Core Idea
 
 The website combines three systems:
