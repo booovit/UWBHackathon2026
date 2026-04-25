@@ -23,12 +23,15 @@ const ProfileContext = createContext<ProfileContextValue | undefined>(
 );
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isDemoUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [loading, setLoading] = useState(true);
 
+  // Synthetic preview user (auth fallback) is not signed into Firestore; keep profile in memory only.
+  const useLocalProfileOnly = !firebaseConfigured || isDemoUser;
+
   useEffect(() => {
-    if (!user || !firebaseConfigured) {
+    if (!user || useLocalProfileOnly) {
       setProfile(defaultProfile);
       setLoading(false);
       return;
@@ -48,7 +51,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       () => setLoading(false),
     );
     return unsub;
-  }, [user]);
+  }, [user, useLocalProfileOnly]);
 
   const saveProfile = useCallback(
     async (next: Partial<UserProfile>) => {
@@ -71,7 +74,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           ...(next.feedbackSignals ?? {}),
         },
       };
-      if (!firebaseConfigured) {
+      if (useLocalProfileOnly) {
         setProfile(mergedLocal);
         return;
       }
@@ -81,7 +84,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         { merge: true },
       );
     },
-    [user, profile],
+    [user, profile, useLocalProfileOnly],
   );
 
   const value = useMemo(

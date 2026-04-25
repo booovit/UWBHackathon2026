@@ -97,8 +97,9 @@ function GeneralStudyView() {
 }
 
 function DocumentStudyView({ docId }: { docId: string }) {
-  const { document, loading } = useDocument(docId);
-  const { chunks, loading: chunksLoading } = useChunks(docId);
+  const { document, loading, error: docError } = useDocument(docId);
+  const { chunks, loading: chunksLoading, error: chunksError } =
+    useChunks(docId);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
 
@@ -113,7 +114,13 @@ function DocumentStudyView({ docId }: { docId: string }) {
   if (!document) {
     return (
       <section className="stack">
-        <p>Document not found.</p>
+        {docError ? (
+          <p className="error-banner" role="alert" style={{ margin: 0 }}>
+            {docError}
+          </p>
+        ) : (
+          <p>Document not found or you don&apos;t have access.</p>
+        )}
         <Link to="/study" className="button">
           Back to study
         </Link>
@@ -185,6 +192,12 @@ function DocumentStudyView({ docId }: { docId: string }) {
         </div>
       )}
 
+      {chunksError && (
+        <div className="error-banner" role="alert">
+          {chunksError}
+        </div>
+      )}
+
       <div
         className="card row"
         style={{ flexWrap: "wrap", alignItems: "center" }}
@@ -208,7 +221,7 @@ function DocumentStudyView({ docId }: { docId: string }) {
         ) : (
           <DocumentReader chunks={chunks} />
         )}
-        <ChatPanel docId={docId} />
+        <ChatPanel docId={docId} documentTitle={document.fileName} />
       </div>
     </section>
   );
