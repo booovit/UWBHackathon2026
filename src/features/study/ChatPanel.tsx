@@ -57,6 +57,16 @@ interface Props {
   documentTitle?: string;
 }
 
+function sortMessages(messages: ChatMessage[]) {
+  return [...messages].sort((a, b) => {
+    const timeA = a.timestamp?.toMillis() ?? 0;
+    const timeB = b.timestamp?.toMillis() ?? 0;
+    if (timeA !== timeB) return timeA - timeB;
+    if (a.role !== b.role) return a.role === "user" ? -1 : 1;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 export function ChatPanel({ docId, documentTitle }: Props) {
   const { profile } = useProfile();
   const { createDeck } = useFlashcardDecks();
@@ -91,8 +101,10 @@ export function ChatPanel({ docId, documentTitle }: Props) {
       (snap) => {
         setListenerError(null);
         setMessages(
-          snap.docs.map(
-            (d) => ({ id: d.id, ...(d.data() as Omit<ChatMessage, "id">) }),
+          sortMessages(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...(d.data() as Omit<ChatMessage, "id">) }),
+            ),
           ),
         );
       },
