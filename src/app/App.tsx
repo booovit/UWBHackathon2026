@@ -45,9 +45,6 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <a href="#main" className="skip-link">
-        Skip to content
-      </a>
       <Header />
       <main id="main" className="app-main" tabIndex={-1}>
         <Routes>
@@ -127,7 +124,7 @@ function Header() {
         <span className="brand-dot" aria-hidden="true" />
         Studylift
       </Link>
-      <nav className="row" aria-label="Primary">
+      <nav className="header-nav row" aria-label="Primary">
         <ThemeToggle />
         <BigFontToggle />
         <Link to="/study" className="button ghost">
