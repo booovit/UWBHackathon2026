@@ -1,11 +1,19 @@
 import { useProfile } from "@/features/profile/ProfileProvider";
 
+const LARGE_PRINT_SCALE = 2.4;
+const MAX_SCALE = 3.0;
+
 export function AccessibilityToolbar() {
   const { profile, saveProfile } = useProfile();
   const ui = profile.uiPreferences;
+  const isLargePrint = ui.fontScale >= LARGE_PRINT_SCALE;
 
   function setUi(next: Partial<typeof ui>) {
     void saveProfile({ uiPreferences: { ...ui, ...next } });
+  }
+
+  function toggleLargePrint() {
+    setUi({ fontScale: isLargePrint ? 1.0 : LARGE_PRINT_SCALE });
   }
 
   return (
@@ -20,7 +28,7 @@ export function AccessibilityToolbar() {
           type="button"
           className="button secondary"
           onClick={() =>
-            setUi({ fontScale: Math.max(0.85, ui.fontScale - 0.1) })
+            setUi({ fontScale: Math.max(0.85, ui.fontScale - 0.15) })
           }
           aria-label="Decrease text size"
         >
@@ -31,11 +39,20 @@ export function AccessibilityToolbar() {
           type="button"
           className="button secondary"
           onClick={() =>
-            setUi({ fontScale: Math.min(1.6, ui.fontScale + 0.1) })
+            setUi({ fontScale: Math.min(MAX_SCALE, ui.fontScale + 0.15) })
           }
           aria-label="Increase text size"
         >
           A+
+        </button>
+        <button
+          type="button"
+          className={isLargePrint ? "button large-print-btn active" : "button large-print-btn"}
+          aria-pressed={isLargePrint}
+          onClick={toggleLargePrint}
+          aria-label="Large print mode for visual impairment"
+        >
+          🔠 Large print
         </button>
       </div>
       <div className="row" style={{ gap: "var(--space-2)" }}>
