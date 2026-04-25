@@ -1,5 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { onCall } from "firebase-functions/v2/https";
+import { FUNCTIONS_REGION } from "./constants";
 import { db } from "./firebaseAdmin";
 import { GENERATION_MODEL, geminiApiKey, getGenAi } from "./geminiClient";
 import { badRequest, requireAuth } from "./errors";
@@ -14,7 +15,12 @@ interface QuickChatResponse {
 }
 
 export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
-  { secrets: [geminiApiKey], timeoutSeconds: 60, memory: "512MiB" },
+  {
+    secrets: [geminiApiKey],
+    timeoutSeconds: 60,
+    memory: "512MiB",
+    region: FUNCTIONS_REGION,
+  },
   async (request) => {
     const uid = request.auth?.uid;
     requireAuth(uid);

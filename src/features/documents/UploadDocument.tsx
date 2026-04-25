@@ -100,7 +100,7 @@ export function UploadDocument({ variant = "full", noCard = false }: Props) {
           type="button"
           className={inline ? "button secondary" : "button"}
           onClick={() => inputRef.current?.click()}
-          disabled={progress !== null || !firebaseConfigured}
+          disabled={progress !== null || !firebaseConfigured || !user}
         >
           {progress !== null
             ? `Uploading ${progress}%`

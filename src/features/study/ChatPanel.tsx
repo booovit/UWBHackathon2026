@@ -11,8 +11,10 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, firebaseConfigured } from "@/lib/firebase";
 import { callChatWithDocument } from "@/lib/functions";
+import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
+import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import type { ChatMessage } from "@/types/chat";
 import type { StudyMode } from "@/types/profile";
@@ -52,10 +54,13 @@ const MODES: { value: StudyMode; label: string; placeholder: string }[] = [
 
 interface Props {
   docId: string;
+  documentTitle?: string;
 }
 
-export function ChatPanel({ docId }: Props) {
+export function ChatPanel({ docId, documentTitle }: Props) {
   const { profile } = useProfile();
+  const { createDeck } = useFlashcardDecks();
+  const { createQuiz } = useSavedQuizzes();
   const [mode, setMode] = useState<StudyMode>(
     profile.studyPreferences.defaultStudyMode,
   );
@@ -64,6 +69,8 @@ export function ChatPanel({ docId }: Props) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
+  const [saveHint, setSaveHint] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,17 +78,30 @@ export function ChatPanel({ docId }: Props) {
       setMessages([]);
       return;
     }
+    if (!firebaseConfigured) {
+      setListenerError(null);
+      return;
+    }
     const q = query(
       collection(db, "documents", docId, "chats", chatId, "messages"),
       orderBy("timestamp", "asc"),
     );
-    return onSnapshot(q, (snap) => {
-      setMessages(
-        snap.docs.map(
-          (d) => ({ id: d.id, ...(d.data() as Omit<ChatMessage, "id">) }),
-        ),
-      );
-    });
+    return onSnapshot(
+      q,
+      (snap) => {
+        setListenerError(null);
+        setMessages(
+          snap.docs.map(
+            (d) => ({ id: d.id, ...(d.data() as Omit<ChatMessage, "id">) }),
+          ),
+        );
+      },
+      (err) => {
+        setListenerError(
+          err instanceof Error ? err.message : "Could not load messages.",
+        );
+      },
+    );
   }, [docId, chatId]);
 
   useEffect(() => {
@@ -114,6 +134,39 @@ export function ChatPanel({ docId }: Props) {
       setError(err instanceof Error ? err.message : "Could not get a response");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveFlashcardsToLibrary(assistantText: string) {
+    setSaveHint(null);
+    const title = documentTitle?.trim() || "Document";
+    try {
+      await createDeck(
+        `Flashcards · ${title}`,
+        [
+          {
+            front: "Generated in study",
+            back: assistantText.slice(0, 12000),
+          },
+        ],
+        docId,
+      );
+      setSaveHint("Flashcards saved to your library.");
+      window.setTimeout(() => setSaveHint(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save flashcards.");
+    }
+  }
+
+  async function saveQuizToLibrary(assistantText: string) {
+    setSaveHint(null);
+    const title = documentTitle?.trim() || "Document";
+    try {
+      await createQuiz(`Quiz · ${title}`, assistantText, docId);
+      setSaveHint("Quiz saved to your library.");
+      window.setTimeout(() => setSaveHint(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save quiz.");
     }
   }
 
@@ -157,10 +210,10 @@ export function ChatPanel({ docId }: Props) {
                 {m.role === "user" ? "You" : "Tutor"} · {m.mode ?? "chat"}
               </span>
               <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
-              {m.citations.length > 0 && (
+              {(m.citations?.length ?? 0) > 0 && (
                 <span className="muted" style={{ fontSize: "0.85em" }}>
                   Sources:{" "}
-                  {m.citations
+                  {(m.citations ?? [])
                     .map((c) =>
                       c.pageNumber !== null
                         ? `p.${c.pageNumber}`
@@ -169,14 +222,48 @@ export function ChatPanel({ docId }: Props) {
                     .join(", ")}
                 </span>
               )}
+              {m.role === "assistant" && mode === "flashcards" && (
+                <div className="row" style={{ marginTop: "var(--space-2)" }}>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => void saveFlashcardsToLibrary(m.content)}
+                  >
+                    Save to library
+                  </button>
+                </div>
+              )}
+              {m.role === "assistant" && mode === "quiz" && (
+                <div className="row" style={{ marginTop: "var(--space-2)" }}>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => void saveQuizToLibrary(m.content)}
+                  >
+                    Save quiz to library
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}
       </div>
 
+      {listenerError && (
+        <div className="error-banner" role="alert">
+          {listenerError}
+        </div>
+      )}
+
       {error && (
         <div className="error-banner" role="alert">
           {error}
+        </div>
+      )}
+
+      {saveHint && (
+        <div className="info-banner" role="status">
+          {saveHint}
         </div>
       )}
 

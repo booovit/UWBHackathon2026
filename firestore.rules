@@ -25,6 +25,18 @@ service cloud.firestore {
           allow write: if false;
         }
       }
+
+      match /folders/{folderId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /flashcardDecks/{deckId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /quizzes/{quizId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     match /documents/{docId} {
