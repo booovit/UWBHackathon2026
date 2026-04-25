@@ -34,6 +34,18 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/** Lets Study/Library load when anonymous auth is off or the network hangs. */
+function demoGuestUser(): User {
+  return {
+    uid: "demo-guest",
+    isAnonymous: true,
+    email: null,
+    displayName: null,
+  } as unknown as User;
+}
+
+const AUTH_READY_MS = 12_000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,33 +53,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!firebaseConfigured) {
-      setUser({
-        uid: "demo-guest",
-        isAnonymous: true,
-        email: null,
-        displayName: null,
-      } as unknown as User);
+      setUser(demoGuestUser());
       setLoading(false);
       return;
     }
+
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const clearFallback = () => {
+      if (fallbackTimer !== undefined) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = undefined;
+      }
+    };
+
+    const armFallback = () => {
+      clearFallback();
+      fallbackTimer = setTimeout(() => {
+        setUser((u) => u ?? demoGuestUser());
+        setLoading(false);
+        ensuringAnon.current = false;
+      }, AUTH_READY_MS);
+    };
+
+    armFallback();
+
     const unsubscribe = onAuthStateChanged(auth, async (next) => {
       if (next) {
+        clearFallback();
         setUser(next);
         setLoading(false);
         ensuringAnon.current = false;
         return;
       }
-      if (ensuringAnon.current) return;
+      if (ensuringAnon.current) {
+        return;
+      }
       ensuringAnon.current = true;
       try {
         await signInAnonymously(auth);
       } catch (err) {
         console.error("Anonymous sign-in failed", err);
+        clearFallback();
+        setUser(demoGuestUser());
         setLoading(false);
         ensuringAnon.current = false;
       }
     });
-    return unsubscribe;
+    return () => {
+      clearFallback();
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
