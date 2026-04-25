@@ -706,6 +706,82 @@ legend {
   margin-right: var(--space-2);
 }
 
+/* Large print mode — visual impairment */
+.large-print-btn {
+  font-size: 1rem;
+  font-weight: 700;
+  border: 2px solid var(--color-border-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+}
+
+.large-print-btn.active,
+.large-print-btn[aria-pressed="true"] {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.35);
+}
+
+.large-print-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-primary);
+}
+
+.large-print-btn.active:hover,
+.large-print-btn[aria-pressed="true"]:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+}
+
+[data-contrast="high"] .large-print-btn[aria-pressed="true"] {
+  background: #ffe600;
+  border-color: #ffe600;
+  color: #000000;
+}
+
+/* Big Font toggle — always large so visually impaired users can find it */
+.big-font-toggle {
+  font-size: 2.8rem;
+  font-weight: 900;
+  padding: 6px 16px;
+  border: 3px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.big-font-toggle:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-primary);
+}
+
+.big-font-toggle.active,
+.big-font-toggle[aria-pressed="true"] {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.4);
+}
+
+.big-font-toggle.active:hover,
+.big-font-toggle[aria-pressed="true"]:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+}
+
+[data-contrast="high"] .big-font-toggle[aria-pressed="true"] {
+  background: #ffe600;
+  border-color: #ffe600;
+  color: #000000;
+  box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.5);
+}
+
 .theme-toggle {
   display: inline-flex;
   background: var(--color-surface-alt);
