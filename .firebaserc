@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "hackathonproject-4bd31"
-  }
+    "default": "hackathonproject-4bd31",
+    "hackathonproject-4bd31": "hackathonproject-4bd31"
+  },
+  "targets": {},
+  "etags": {}
 }
