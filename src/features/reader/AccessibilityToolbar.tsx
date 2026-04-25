@@ -5,7 +5,9 @@ export function AccessibilityToolbar() {
   const ui = profile.uiPreferences;
 
   function setUi(next: Partial<typeof ui>) {
-    void saveProfile({ uiPreferences: { ...ui, ...next } });
+    void saveProfile({ uiPreferences: { ...ui, ...next } }).catch((err) => {
+      console.error("Could not save accessibility preferences", err);
+    });
   }
 
   return (

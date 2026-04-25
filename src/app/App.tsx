@@ -120,7 +120,11 @@ function Header() {
             <button
               type="button"
               className="button secondary"
-              onClick={() => void signOutUser()}
+              onClick={() => {
+                void signOutUser().catch((err) => {
+                  console.error("Sign out failed", err);
+                });
+              }}
             >
               Sign out
             </button>

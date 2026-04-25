@@ -1,16 +1,20 @@
+import "./initRuntime";
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onCall } from "firebase-functions/v2/https";
-import { setGlobalOptions } from "firebase-functions/v2";
 import { db } from "./firebaseAdmin";
 import { processDocument } from "./documentProcessor";
 import { geminiApiKey } from "./geminiClient";
 import { badRequest, requireAuth, requireOwnership } from "./errors";
+import { FUNCTIONS_REGION } from "./constants";
 import type { DocumentRecord } from "./types";
 
-setGlobalOptions({ region: "us-central1", maxInstances: 10 });
-
 export const onDocumentUploaded = onObjectFinalized(
-  { secrets: [geminiApiKey], timeoutSeconds: 540, memory: "1GiB" },
+  {
+    secrets: [geminiApiKey],
+    timeoutSeconds: 540,
+    memory: "1GiB",
+    region: FUNCTIONS_REGION,
+  },
   async (event) => {
     const path = event.data.name;
     if (!path) return;
@@ -27,7 +31,12 @@ export const onDocumentUploaded = onObjectFinalized(
 export const retryDocumentProcessing = onCall<
   { docId?: string },
   Promise<{ ok: true }>
->({ secrets: [geminiApiKey], timeoutSeconds: 540, memory: "1GiB" }, async (request) => {
+>({
+  secrets: [geminiApiKey],
+  timeoutSeconds: 540,
+  memory: "1GiB",
+  region: FUNCTIONS_REGION,
+}, async (request) => {
   const uid = request.auth?.uid;
   requireAuth(uid);
 
