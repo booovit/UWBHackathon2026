@@ -8,55 +8,44 @@ import {
   type ReactNode,
 } from "react";
 
-type Theme = "light" | "dark" | "system";
+export type Theme = "dark" | "light" | "high-contrast";
 
 interface ThemeContextValue {
   theme: Theme;
-  resolvedTheme: "light" | "dark";
   setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-function getSystemTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+const STORAGE_KEY = "studylift.theme";
+
+function readStoredTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  const value = window.localStorage.getItem(STORAGE_KEY);
+  if (value === "light" || value === "high-contrast" || value === "dark") {
+    return value;
+  }
+  return "dark";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "system";
-    return (localStorage.getItem("theme") as Theme) || "system";
-  });
-
-  const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
+  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme());
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(resolvedTheme);
-  }, [resolvedTheme]);
-
-  useEffect(() => {
-    if (theme === "system") {
-      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      const handler = () => setThemeState("system");
-      mediaQuery.addEventListener("change", handler);
-      return () => mediaQuery.removeEventListener("change", handler);
+    if (theme === "high-contrast") {
+      root.dataset.theme = "dark";
+      root.dataset.contrast = "high";
+    } else {
+      root.dataset.theme = theme;
+      root.dataset.contrast = "normal";
     }
+    window.localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
-  const setTheme = useCallback((newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem("theme", newTheme);
-  }, []);
+  const setTheme = useCallback((next: Theme) => setThemeState(next), []);
 
-  const value = useMemo(
-    () => ({ theme, resolvedTheme, setTheme }),
-    [theme, resolvedTheme, setTheme],
-  );
+  const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
@@ -71,26 +60,33 @@ export function useTheme() {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-
-  const cycleTheme = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
-  };
-
-  const label =
-    theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
-
   return (
-    <button
-      type="button"
-      className="button ghost"
-      onClick={cycleTheme}
-      aria-label={`Theme: ${label}. Click to change.`}
+    <div
+      className="theme-toggle"
+      role="group"
+      aria-label="Color theme"
     >
-      {theme === "light" && "☀️"}
-      {theme === "dark" && "🌙"}
-      {theme === "system" && "💻"}
-    </button>
+      <button
+        type="button"
+        aria-pressed={theme === "dark"}
+        onClick={() => setTheme("dark")}
+      >
+        Dark
+      </button>
+      <button
+        type="button"
+        aria-pressed={theme === "light"}
+        onClick={() => setTheme("light")}
+      >
+        Light
+      </button>
+      <button
+        type="button"
+        aria-pressed={theme === "high-contrast"}
+        onClick={() => setTheme("high-contrast")}
+      >
+        High contrast
+      </button>
+    </div>
   );
 }

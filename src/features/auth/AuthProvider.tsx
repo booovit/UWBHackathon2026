@@ -22,6 +22,8 @@ import {
 } from "firebase/auth";
 import { auth, firebaseConfigured } from "@/lib/firebase";
 
+const AUTH_FALLBACK_MS = 4000;
+
 export interface AuthContextValue {
   user: User | null;
   isGuest: boolean;
@@ -41,33 +43,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!firebaseConfigured) {
-      setUser({
-        uid: "demo-guest",
-        isAnonymous: true,
-        email: null,
-        displayName: null,
-      } as unknown as User);
+      setUser(makeDemoGuest());
       setLoading(false);
       return;
     }
+
+    const fallbackTimer = window.setTimeout(() => {
+      setUser((prev) => prev ?? makeDemoGuest());
+      setLoading(false);
+      ensuringAnon.current = false;
+    }, AUTH_FALLBACK_MS);
+
     const unsubscribe = onAuthStateChanged(auth, async (next) => {
       if (next) {
+        window.clearTimeout(fallbackTimer);
         setUser(next);
         setLoading(false);
         ensuringAnon.current = false;
         return;
       }
-      if (ensuringAnon.current) return;
+      if (ensuringAnon.current) {
+        return;
+      }
       ensuringAnon.current = true;
       try {
         await signInAnonymously(auth);
       } catch (err) {
         console.error("Anonymous sign-in failed", err);
+        window.clearTimeout(fallbackTimer);
+        setUser(makeDemoGuest());
         setLoading(false);
         ensuringAnon.current = false;
       }
     });
-    return unsubscribe;
+
+    return () => {
+      window.clearTimeout(fallbackTimer);
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -138,4 +151,13 @@ function isCredentialInUse(err: unknown): boolean {
     code === "auth/credential-already-in-use" ||
     code === "auth/email-already-in-use"
   );
+}
+
+function makeDemoGuest(): User {
+  return {
+    uid: "demo-guest",
+    isAnonymous: true,
+    email: null,
+    displayName: null,
+  } as unknown as User;
 }
