@@ -23,6 +23,16 @@ interface QuickMessage {
   timestamp?: Timestamp;
 }
 
+function sortMessages(messages: QuickMessage[]) {
+  return [...messages].sort((a, b) => {
+    const timeA = a.timestamp?.toMillis() ?? 0;
+    const timeB = b.timestamp?.toMillis() ?? 0;
+    if (timeA !== timeB) return timeA - timeB;
+    if (a.role !== b.role) return a.role === "user" ? -1 : 1;
+    return a.id.localeCompare(b.id);
+  });
+}
+
 const SUGGESTIONS = [
   "Explain photosynthesis simply",
   "Quiz me on World War II causes",
@@ -55,8 +65,10 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       (snap) => {
         setListenerError(null);
         setMessages(
-          snap.docs.map(
-            (d) => ({ id: d.id, ...(d.data() as Omit<QuickMessage, "id">) }),
+          sortMessages(
+            snap.docs.map(
+              (d) => ({ id: d.id, ...(d.data() as Omit<QuickMessage, "id">) }),
+            ),
           ),
         );
       },
