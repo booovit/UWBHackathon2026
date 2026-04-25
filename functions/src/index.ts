@@ -2,7 +2,6 @@ import "./initRuntime";
 import { onObjectFinalized } from "firebase-functions/v2/storage";
 import { onCall } from "firebase-functions/v2/https";
 import { db } from "./firebaseAdmin";
-import { processDocument } from "./documentProcessor";
 import { geminiApiKey } from "./geminiClient";
 import { badRequest, requireAuth, requireOwnership } from "./errors";
 import { FUNCTIONS_REGION } from "./constants";
@@ -24,6 +23,7 @@ export const onDocumentUploaded = onObjectFinalized(
       return;
     }
     const docId = match[1];
+    const { processDocument } = await import("./documentProcessor");
     await processDocument(docId);
   },
 );
@@ -49,6 +49,7 @@ export const retryDocumentProcessing = onCall<
   const docData = snap.data() as DocumentRecord;
   requireOwnership(docData.uid, uid);
 
+  const { processDocument } = await import("./documentProcessor");
   await processDocument(docId);
   return { ok: true };
 });

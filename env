@@ -1,0 +1,19 @@
+# Frontend Firebase web config.
+# Copy this file to `.env.local` and fill in the values from your Firebase project.
+# Firebase console -> Project settings -> General -> Your apps -> SDK setup and configuration.
+# The `VITE_` prefix is required so Vite exposes these variables to the client.
+# These are NOT the Gemini API key. Gemini lives in functions/.secret.local instead.
+
+VITE_FIREBASE_API_KEY=AIzaSyDHk4FDf3uI0jJAO3ep7xlDn-fry6iInSc
+VITE_FIREBASE_AUTH_DOMAIN=hackathonproject-4bd31.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=hackathonproject-4bd31
+VITE_FIREBASE_STORAGE_BUCKET=hackathonproject-4bd31.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=216621022534
+VITE_FIREBASE_APP_ID=1:216621022534:web:fe8ad9c6cc8a88dbbb3947
+
+# Optional. Set to "true" to point the client at the Firebase emulators.
+VITE_USE_EMULATORS=false
+
+# Optional. Cloud Functions region — must match where functions are deployed
+# (and your Storage bucket region; see README). Defaults to us-east1 in code.
+VITE_FUNCTIONS_REGION=us-east1
