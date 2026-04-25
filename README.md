@@ -41,51 +41,87 @@ If you stay on Node 25, npm will still build, but you will keep seeing **engine 
 
 ### Local quick start (recommended)
 
-Run the full app locally with Firebase emulators:
+This repo is configured to use Firebase emulators by default (`VITE_USE_EMULATORS=true` in the root `.env`). You run **two terminals** from the **repo root** (the folder that contains `package.json` and `firebase.json`).
 
-> The Firebase emulator suite requires Java to be installed and available on `PATH`. If `npx firebase emulators:start` fails with `Unable to locate a Java Runtime`, install Java first or use the frontend-only path below.
+> The Firebase emulator suite requires **Java** on `PATH`. If `npx firebase emulators:start` fails with `Unable to locate a Java Runtime`, install Java first (see below) or use [Local frontend only](#local-frontend-only).
+
+#### One-time setup (machine + repo)
 
 ```bash
-# One-time machine setup if Java is missing:
+# macOS (Homebrew) — Java for emulators:
 brew install openjdk@21
 echo 'export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"' >> ~/.zprofile
 source ~/.zprofile
+java -version
 
-# 1) Use the checked-in root .env as a starter, or copy it to .env.local if you want overrides
-# 2) Create functions/.secret.local with your Gemini key for emulator-only functions:
-printf 'GEMINI_API_KEY=your-gemini-key-here\n' > functions/.secret.local
-
-# 3) Install deps
-nvm use 20
+# From repo root — install deps (after clone or lockfile changes):
+nvm use 20    # optional; or install Node 20 from nodejs.org
 npm ci
 npm --prefix functions ci
 
-# 4) Start the emulators this app needs
+# Gemini for Functions *emulator only* (gitignored):
+printf 'GEMINI_API_KEY=your-gemini-key-here\n' > functions/.secret.local
+```
+
+Ensure root **`.env`** exists with your `VITE_FIREBASE_*` values and `VITE_USE_EMULATORS=true` (or copy from a teammate if `.env` is not in git).
+
+#### Run on your screen (exact two-terminal flow)
+
+Use **Terminal.app**, iTerm, or Cursor’s integrated terminal. **Start emulators first**, wait for readiness, then start Vite.
+
+**Terminal 1 — emulators** (same shell must see `java`; on Apple Silicon Homebrew OpenJDK 21):
+
+```bash
+cd /path/to/UWBHackathon2026
+export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
 npx firebase emulators:start --only auth,functions,firestore,storage
 ```
 
-In a second terminal:
+Leave this running. Wait until you see **`All emulators ready! It is now safe to connect your app.`** and the port table (Auth `9099`, Functions `5001`, Firestore `8080`, Storage `9199`).
+
+**Terminal 2 — Vite** (open a *new* tab/window after the line above appears):
+
+```bash
+cd /path/to/UWBHackathon2026
+npm run dev -- --port 5173 --strictPort
+```
+
+**Open in the browser**
+
+- App: `http://localhost:5173`
+- Emulator UI: `http://127.0.0.1:4000`
+
+If the first page load shows Firestore “could not reach backend” / offline warnings in the Vite terminal, wait for **All emulators ready** in Terminal 1, then **refresh** the browser once. That happens when the UI loads a moment before Firestore is accepting connections.
+
+Optional explicit override (only if you are not using `VITE_USE_EMULATORS=true` in `.env`):
 
 ```bash
 VITE_USE_EMULATORS=true npm run dev -- --port 5173 --strictPort
 ```
 
-This gives you the closest thing to a "works locally" setup:
+#### Stop everything
 
-- React app on Vite dev server
+```bash
+lsof -nP -iTCP:5173,5001,8080,9099,9199,4000,4400 -sTCP:LISTEN
+kill <PID>    # repeat for each PID listed (node / java)
+```
+
+Or press **Ctrl+C** in each terminal that is still running.
+
+Why `--only auth,functions,firestore,storage`? The app is served by Vite, so the Firebase Hosting emulator is optional and skipping it avoids port clashes (for example on `5000`).
+
+**What you get**
+
+- React app on Vite
 - Auth / Firestore / Storage / Functions emulators from [`firebase.json`](./firebase.json)
-- Gemini available to Functions through `functions/.secret.local`
-- Emulator UI at `http://127.0.0.1:4000`
-- App at `http://localhost:5173`
-
-Why `--only auth,functions,firestore,storage`? The app is already served by Vite, so the Firebase Hosting emulator is optional for day-to-day local development. Skipping it avoids local port conflicts on `5000`.
+- Gemini in the Functions emulator via `functions/.secret.local`
 
 ### Local frontend only
 
-If you only want to verify the UI without backend emulators, use the existing root `.env` (or copy it to `.env.local` and override values there), then run:
+If you only want to verify the UI against the deployed Firebase project without backend emulators, override the default emulator setting for that terminal:
 
 ```bash
-npm run dev
+VITE_USE_EMULATORS=false npm run dev -- --port 5173 --strictPort
 ```
 
 If anonymous auth is disabled in the live Firebase project, use the normal sign-in flow on `/login` instead of relying on guest auth.
