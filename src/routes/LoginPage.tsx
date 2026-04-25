@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { firebaseConfigured } from "@/lib/firebase";
 
 export function LoginPage() {
-  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail } =
+  const { user, isGuest, isDemoUser, signInWithGoogle, signInWithEmail, signUpWithEmail } =
     useAuth();
   const location = useLocation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -12,8 +13,10 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (user) {
-    const from = (location.state as { from?: Location })?.from?.pathname;
+  // Only leave when we have a real signed-in account (not guest / not preview demo user).
+  if (user && !isGuest) {
+    const from = (location.state as { from?: { pathname: string } })?.from
+      ?.pathname;
     return <Navigate to={from ?? "/dashboard"} replace />;
   }
 
@@ -52,10 +55,25 @@ export function LoginPage() {
       style={{ maxWidth: 420, margin: "0 auto" }}
       aria-labelledby="login-title"
     >
+      {isDemoUser && (
+        <div className="info-banner" role="status">
+          <strong>Preview mode.</strong> Add Firebase in <code>.env.local</code>{" "}
+          for real sign-in. You can still use this form layout below.
+        </div>
+      )}
+      {isGuest && user && !isDemoUser && firebaseConfigured && (
+        <div className="info-banner" role="status">
+          <strong>Guest session.</strong> Sign in or create an account to keep
+          your work across devices. Your data will be linked to this account.
+        </div>
+      )}
       <h1 id="login-title">{mode === "signin" ? "Sign in" : "Create account"}</h1>
       <p className="muted">
         Studylift adapts to how you learn. Sign in to upload documents and
         configure your accessibility profile.
+      </p>
+      <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+        <Link to="/">Back to home</Link> · <Link to="/study">Study</Link>
       </p>
 
       <button
