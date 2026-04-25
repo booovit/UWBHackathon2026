@@ -1,12 +1,8 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  doc,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { ref as storageRef, uploadBytesResumable } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db, firebaseConfigured, storage } from "@/lib/firebase";
 import { useAuth } from "@/features/auth/AuthProvider";
 
 const ACCEPTED = [
@@ -18,17 +14,29 @@ const ACCEPTED = [
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
-export function UploadDocument() {
+interface Props {
+  /** Full card (default) or a single row for the study strip */
+  variant?: "full" | "inline";
+  /** Strip outer card wrapper (for nesting inside another card) */
+  noCard?: boolean;
+}
+
+export function UploadDocument({ variant = "full", noCard = false }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const inline = variant === "inline";
 
   async function onSelect(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !user) return;
+    if (!firebaseConfigured) {
+      setError("Add Firebase config (see README) to upload files.");
+      return;
+    }
 
     setError(null);
 
@@ -70,7 +78,9 @@ export function UploadDocument() {
     upload.on(
       "state_changed",
       (snap) => {
-        setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+        setProgress(
+          Math.round((snap.bytesTransferred / snap.totalBytes) * 100),
+        );
       },
       (err) => {
         setError(err.message);
@@ -78,26 +88,34 @@ export function UploadDocument() {
       },
       () => {
         setProgress(null);
-        navigate(`/documents/${docRef.id}`);
+        navigate(`/study/${docRef.id}`);
       },
     );
   }
 
-  return (
-    <div className="card stack" aria-labelledby="upload-title">
-      <h2 id="upload-title" style={{ fontSize: "1.1rem" }}>
-        Upload a study document
-      </h2>
-      <p className="muted">PDF, DOCX, TXT, or Markdown. Max 25 MB.</p>
-      <div className="row">
+  const body = (
+    <>
+      <div className="row" style={inline ? { margin: 0 } : undefined}>
         <button
           type="button"
-          className="button"
+          className={inline ? "button secondary" : "button"}
           onClick={() => inputRef.current?.click()}
-          disabled={progress !== null}
+          disabled={progress !== null || !firebaseConfigured}
         >
-          {progress !== null ? `Uploading ${progress}%` : "Choose file"}
+          {progress !== null
+            ? `Uploading ${progress}%`
+            : inline
+              ? "Choose file"
+              : "Choose file"}
         </button>
+        {!inline && (
+          <span className="muted">PDF, DOCX, TXT, or Markdown. Max 25 MB.</span>
+        )}
+        {inline && !firebaseConfigured && (
+          <span className="muted" style={{ fontSize: "0.85rem" }}>
+            (requires Firebase in .env.local)
+          </span>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -111,6 +129,42 @@ export function UploadDocument() {
           {error}
         </div>
       )}
+    </>
+  );
+
+  if (noCard) {
+    return (
+      <div
+        className="upload-inline"
+        aria-label="Upload a study document"
+        style={inline ? { display: "contents" } : undefined}
+      >
+        {body}
+      </div>
+    );
+  }
+
+  if (inline) {
+    return (
+      <div className="card" style={{ padding: "var(--space-3) var(--space-4)" }}>
+        <h2
+          className="visually-hidden"
+          id={inline ? "upload-inline-h" : "upload-title"}
+        >
+          Add a document
+        </h2>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div className="card stack" aria-labelledby="upload-title">
+      <h2 id="upload-title" style={{ fontSize: "1.1rem" }}>
+        Upload a study document
+      </h2>
+      <p className="muted">PDF, DOCX, TXT, or Markdown. Max 25 MB.</p>
+      {body}
     </div>
   );
 }

@@ -3,22 +3,28 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import {
+  EmailAuthProvider,
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  linkWithCredential,
+  linkWithPopup,
   onAuthStateChanged,
+  signInAnonymously,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
   type User,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, firebaseConfigured } from "@/lib/firebase";
 
 export interface AuthContextValue {
   user: User | null;
+  isGuest: boolean;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -31,11 +37,35 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const ensuringAnon = useRef(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (next) => {
-      setUser(next);
+    if (!firebaseConfigured) {
+      setUser({
+        uid: "demo-guest",
+        isAnonymous: true,
+        email: null,
+        displayName: null,
+      } as unknown as User);
       setLoading(false);
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, async (next) => {
+      if (next) {
+        setUser(next);
+        setLoading(false);
+        ensuringAnon.current = false;
+        return;
+      }
+      if (ensuringAnon.current) return;
+      ensuringAnon.current = true;
+      try {
+        await signInAnonymously(auth);
+      } catch (err) {
+        console.error("Anonymous sign-in failed", err);
+        setLoading(false);
+        ensuringAnon.current = false;
+      }
     });
     return unsubscribe;
   }, []);
@@ -43,14 +73,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      isGuest: user?.isAnonymous ?? false,
       loading,
       async signInWithGoogle() {
-        await signInWithPopup(auth, new GoogleAuthProvider());
+        const provider = new GoogleAuthProvider();
+        if (auth.currentUser?.isAnonymous) {
+          try {
+            await linkWithPopup(auth.currentUser, provider);
+            return;
+          } catch (err) {
+            if (isCredentialInUse(err)) {
+              await signInWithPopup(auth, provider);
+              return;
+            }
+            throw err;
+          }
+        }
+        await signInWithPopup(auth, provider);
       },
       async signInWithEmail(email, password) {
+        if (auth.currentUser?.isAnonymous) {
+          const cred = EmailAuthProvider.credential(email, password);
+          try {
+            await linkWithCredential(auth.currentUser, cred);
+            return;
+          } catch (err) {
+            if (isCredentialInUse(err)) {
+              await signInWithEmailAndPassword(auth, email, password);
+              return;
+            }
+            throw err;
+          }
+        }
         await signInWithEmailAndPassword(auth, email, password);
       },
       async signUpWithEmail(email, password) {
+        if (auth.currentUser?.isAnonymous) {
+          const cred = EmailAuthProvider.credential(email, password);
+          await linkWithCredential(auth.currentUser, cred);
+          return;
+        }
         await createUserWithEmailAndPassword(auth, email, password);
       },
       async signOutUser() {
@@ -67,4 +129,13 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
   return ctx;
+}
+
+function isCredentialInUse(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const code = (err as { code?: string }).code;
+  return (
+    code === "auth/credential-already-in-use" ||
+    code === "auth/email-already-in-use"
+  );
 }

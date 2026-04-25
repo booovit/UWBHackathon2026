@@ -7,7 +7,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, firebaseConfigured } from "@/lib/firebase";
 import type { StudyDocument } from "@/types/document";
 import { useAuth } from "@/features/auth/AuthProvider";
 
@@ -17,7 +17,7 @@ export function useDocuments() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !firebaseConfigured) {
       setDocuments([]);
       setLoading(false);
       return;
@@ -51,7 +51,7 @@ export function useDocument(docId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!docId) {
+    if (!docId || !firebaseConfigured) {
       setDocument(null);
       setLoading(false);
       return;
