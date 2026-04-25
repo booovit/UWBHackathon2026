@@ -22,6 +22,8 @@ import {
 } from "firebase/auth";
 import { auth, firebaseConfigured } from "@/lib/firebase";
 
+const AUTH_FALLBACK_MS = 4000;
+
 export interface AuthContextValue {
   user: User | null;
   isGuest: boolean;
@@ -34,18 +36,6 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-/** Lets Study/Library load when anonymous auth is off or the network hangs. */
-function demoGuestUser(): User {
-  return {
-    uid: "demo-guest",
-    isAnonymous: true,
-    email: null,
-    displayName: null,
-  } as unknown as User;
-}
-
-const AUTH_READY_MS = 12_000;
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,34 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!firebaseConfigured) {
-      setUser(demoGuestUser());
+      setUser(makeDemoGuest());
       setLoading(false);
       return;
     }
 
-    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const clearFallback = () => {
-      if (fallbackTimer !== undefined) {
-        clearTimeout(fallbackTimer);
-        fallbackTimer = undefined;
-      }
-    };
-
-    const armFallback = () => {
-      clearFallback();
-      fallbackTimer = setTimeout(() => {
-        setUser((u) => u ?? demoGuestUser());
-        setLoading(false);
-        ensuringAnon.current = false;
-      }, AUTH_READY_MS);
-    };
-
-    armFallback();
+    const fallbackTimer = window.setTimeout(() => {
+      setUser((prev) => prev ?? makeDemoGuest());
+      setLoading(false);
+      ensuringAnon.current = false;
+    }, AUTH_FALLBACK_MS);
 
     const unsubscribe = onAuthStateChanged(auth, async (next) => {
       if (next) {
-        clearFallback();
+        window.clearTimeout(fallbackTimer);
         setUser(next);
         setLoading(false);
         ensuringAnon.current = false;
@@ -94,14 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signInAnonymously(auth);
       } catch (err) {
         console.error("Anonymous sign-in failed", err);
-        clearFallback();
-        setUser(demoGuestUser());
+        window.clearTimeout(fallbackTimer);
+        setUser(makeDemoGuest());
         setLoading(false);
         ensuringAnon.current = false;
       }
     });
+
     return () => {
-      clearFallback();
+      window.clearTimeout(fallbackTimer);
       unsubscribe();
     };
   }, []);
@@ -174,4 +151,13 @@ function isCredentialInUse(err: unknown): boolean {
     code === "auth/credential-already-in-use" ||
     code === "auth/email-already-in-use"
   );
+}
+
+function makeDemoGuest(): User {
+  return {
+    uid: "demo-guest",
+    isAnonymous: true,
+    email: null,
+    displayName: null,
+  } as unknown as User;
 }
