@@ -5,6 +5,7 @@ import "@/styles/globals.css";
 import { App } from "@/app/App";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { ProfileProvider } from "@/features/profile/ProfileProvider";
+import { ThemeProvider } from "@/features/theme/ThemeProvider";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Missing #root element");
@@ -12,11 +13,13 @@ if (!rootEl) throw new Error("Missing #root element");
 createRoot(rootEl).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <ProfileProvider>
-          <App />
-        </ProfileProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ProfileProvider>
+            <App />
+          </ProfileProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </StrictMode>,
 );

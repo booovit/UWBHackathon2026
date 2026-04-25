@@ -2,9 +2,12 @@
 
 Studylift turns uploaded study materials (PDF, DOCX, TXT, MD) into a personalized reading and study experience. Students pick the supports they need (dyslexia, ADHD/executive function, low vision), and the same document becomes:
 
+- A no-sign-in **guest mode** that lets anyone chat with the tutor immediately (anonymous Firebase Auth in the background).
 - An adaptive reader with text size, spacing, line focus, and high-contrast controls.
 - A document-grounded Gemini tutor (chat, simplify, summary, quiz, flashcards, step-by-step).
 - A profile that learns from feedback over time, while always letting the user override.
+
+When a guest signs in, their anonymous account is **linked** to the new account, so all their chats, documents, and preferences carry over (just like ChatGPT's "sign in to save" flow).
 
 The full product blueprint lives in [`ACCESSIBILITY_AI_STUDY_PLATFORM_PLAN.md`](./ACCESSIBILITY_AI_STUDY_PLATFORM_PLAN.md).
 
@@ -71,7 +74,7 @@ Cloud Functions target Node 20. Use `nvm use 20` if your local version is differ
 
 1. **Create a web app** in the Firebase console. Copy the config — you'll paste it into `.env.local` below.
 2. **Enable services** in the console:
-   - Authentication → Sign-in methods → enable **Email/Password** and **Google**.
+   - Authentication → Sign-in methods → enable **Anonymous** (required for guest mode), **Email/Password**, and **Google**.
    - Firestore Database → create a Native-mode database.
    - Storage → enable.
 3. **Link the Firebase CLI to your project.**
@@ -206,13 +209,15 @@ This deploys hosting, Functions, Firestore rules + indexes, and Storage rules.
 
 ## How it works (data flow)
 
-1. User signs up → Firebase Auth.
-2. User completes onboarding → profile saved at `users/{uid}/profile/main`.
-3. User uploads a document → file goes to Storage at `users/{uid}/documents/{docId}/original/...`, metadata at `documents/{docId}`.
-4. Storage trigger `onDocumentUploaded` fires → extracts text (pdf-parse / mammoth / plain), chunks it, embeds each chunk with Gemini (`gemini-embedding-001`, 768-d), writes chunks to `documents/{docId}/chunks/*`, marks the document `ready`.
-5. User opens the document → reader renders chunks with adaptive accessibility settings; chat panel sends messages to `chatWithDocument`.
-6. `chatWithDocument` validates auth + ownership, embeds the query, runs Firestore vector search filtered to the document, builds a profile-aware prompt, calls `gemini-2.5-flash`, saves user + assistant messages with citations.
-7. Feedback (`saveFeedback`) writes to `documents/{docId}/feedback/*` and updates `feedbackSignals` on the profile, while preserving manual override.
+1. Visitor lands on the site → `AuthProvider` automatically calls `signInAnonymously` so they get a Firebase uid without filling in any form.
+2. They can immediately chat in the **Try the tutor** panel → `quickChat` callable runs Gemini on the server with the user's preferences and persists messages under `users/{uid}/quickChat/main/messages/*`.
+3. (Optional) The user signs in or signs up → `linkWithCredential` / `linkWithPopup` upgrades the anonymous account so the same uid is preserved and all guest data stays.
+4. The user completes onboarding → profile saved at `users/{uid}/profile/main`.
+5. The user uploads a document → file goes to Storage at `users/{uid}/documents/{docId}/original/...`, metadata at `documents/{docId}`.
+6. Storage trigger `onDocumentUploaded` fires → extracts text (pdf-parse / mammoth / plain), chunks it, embeds each chunk with Gemini (`gemini-embedding-001`, 768-d), writes chunks to `documents/{docId}/chunks/*`, marks the document `ready`.
+7. The user opens the document → reader renders chunks with adaptive accessibility settings; chat panel sends messages to `chatWithDocument`.
+8. `chatWithDocument` validates auth + ownership, embeds the query, runs Firestore vector search filtered to the document, builds a profile-aware prompt, calls `gemini-2.5-flash`, saves user + assistant messages with citations.
+9. Feedback (`saveFeedback`) writes to `documents/{docId}/feedback/*` and updates `feedbackSignals` on the profile, while preserving manual override.
 
 ---
 

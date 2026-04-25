@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, firebaseConfigured } from "@/lib/firebase";
 import type { DocumentChunk } from "@/types/document";
 
 export function useChunks(docId: string | undefined) {
@@ -8,7 +8,7 @@ export function useChunks(docId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!docId) {
+    if (!docId || !firebaseConfigured) {
       setChunks([]);
       setLoading(false);
       return;

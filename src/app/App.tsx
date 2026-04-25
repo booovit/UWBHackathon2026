@@ -1,14 +1,15 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
-import { useAuth } from "@/features/auth/AuthProvider";
+import { Link, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import { useApplyAccessibility } from "@/features/profile/applyAccessibility";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { useAuth } from "@/features/auth/AuthProvider";
 import { LandingPage } from "@/routes/LandingPage";
 import { LoginPage } from "@/routes/LoginPage";
 import { OnboardingPage } from "@/routes/OnboardingPage";
 import { DashboardPage } from "@/routes/DashboardPage";
-import { DocumentPage } from "@/routes/DocumentPage";
 import { SettingsPage } from "@/routes/SettingsPage";
+import { StudyPage } from "@/routes/StudyPage";
+import { ThemeToggle } from "@/features/theme/ThemeProvider";
 
 export function App() {
   const { profile } = useProfile();
@@ -25,6 +26,34 @@ export function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route
+            path="/chat"
+            element={<Navigate to="/study" replace />}
+          />
+          <Route
+            path="/documents/:docId"
+            element={
+              <ProtectedRoute>
+                <LegacyDocumentRedirect />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/study"
+            element={
+              <ProtectedRoute>
+                <StudyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/study/:docId"
+            element={
+              <ProtectedRoute>
+                <StudyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/onboarding"
             element={
               <ProtectedRoute>
@@ -37,14 +66,6 @@ export function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/documents/:docId"
-            element={
-              <ProtectedRoute>
-                <DocumentPage />
               </ProtectedRoute>
             }
           />
@@ -63,23 +84,39 @@ export function App() {
   );
 }
 
+function LegacyDocumentRedirect() {
+  const { docId } = useParams<{ docId: string }>();
+  return <Navigate to={`/study/${docId ?? ""}`} replace />;
+}
+
 function Header() {
-  const { user, signOutUser } = useAuth();
+  const { user, isGuest, signOutUser } = useAuth();
+  const isSignedIn = Boolean(user) && !isGuest;
 
   return (
     <header className="app-header">
-      <Link to={user ? "/dashboard" : "/"} className="brand">
+      <Link to="/" className="brand">
+        <span className="brand-dot" aria-hidden="true" />
         Studylift
       </Link>
       <nav className="row" aria-label="Primary">
-        {user ? (
+        <ThemeToggle />
+        <Link to="/study" className="button ghost">
+          Study
+        </Link>
+        <Link to="/dashboard" className="button ghost">
+          Library
+        </Link>
+        {isSignedIn && (
+          <Link to="/settings" className="button ghost">
+            Settings
+          </Link>
+        )}
+        {isSignedIn ? (
           <>
-            <Link to="/dashboard" className="button ghost">
-              Dashboard
-            </Link>
-            <Link to="/settings" className="button ghost">
-              Settings
-            </Link>
+            <span className="muted" aria-label="Signed in as">
+              {user?.email ?? "Signed in"}
+            </span>
             <button
               type="button"
               className="button secondary"
@@ -89,9 +126,14 @@ function Header() {
             </button>
           </>
         ) : (
-          <Link to="/login" className="button">
-            Sign in
-          </Link>
+          <>
+            <span className="badge" title="You're using Studylift as a guest">
+              {isGuest ? "Guest" : "Loading"}
+            </span>
+            <Link to="/login" className="button">
+              Sign in to save
+            </Link>
+          </>
         )}
       </nav>
     </header>
