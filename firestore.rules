@@ -15,6 +15,16 @@ service cloud.firestore {
       match /profile/{profileId} {
         allow read, write: if isOwner(uid);
       }
+
+      match /quickChat/{chatId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+
+        match /messages/{messageId} {
+          allow read: if isOwner(uid);
+          allow write: if false;
+        }
+      }
     }
 
     match /documents/{docId} {

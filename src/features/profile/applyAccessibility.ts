@@ -5,7 +5,6 @@ export function useApplyAccessibility(prefs: UiPreferences) {
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--font-scale", String(prefs.fontScale));
-    root.dataset.contrast = prefs.highContrast ? "high" : "normal";
     root.dataset.spacing = prefs.extraSpacing ? "extra" : "default";
     root.dataset.lineWidth = prefs.maxLineWidth;
     root.dataset.reducedMotion = prefs.reducedMotion ? "true" : "false";
