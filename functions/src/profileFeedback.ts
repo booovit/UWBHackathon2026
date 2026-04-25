@@ -1,5 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { onCall } from "firebase-functions/v2/https";
+import { FUNCTIONS_REGION } from "./constants";
 import { db } from "./firebaseAdmin";
 import { badRequest, requireAuth, requireOwnership } from "./errors";
 import type { DocumentRecord } from "./types";
@@ -22,6 +23,7 @@ interface FeedbackRequest {
 }
 
 export const saveFeedback = onCall<FeedbackRequest, Promise<{ ok: true }>>(
+  { region: FUNCTIONS_REGION },
   async (request) => {
     const uid = request.auth?.uid;
     requireAuth(uid);

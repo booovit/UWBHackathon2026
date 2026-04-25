@@ -36,11 +36,13 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listenerError, setListenerError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user || !firebaseConfigured) {
       setMessages([]);
+      setListenerError(null);
       return;
     }
     const q = query(
@@ -51,13 +53,18 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
     return onSnapshot(
       q,
       (snap) => {
+        setListenerError(null);
         setMessages(
           snap.docs.map(
             (d) => ({ id: d.id, ...(d.data() as Omit<QuickMessage, "id">) }),
           ),
         );
       },
-      () => {},
+      (err) => {
+        setListenerError(
+          err instanceof Error ? err.message : "Could not load messages.",
+        );
+      },
     );
   }, [user]);
 
@@ -173,9 +180,14 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
         )}
       </div>
 
-      {(error || authLoading) && (
+      {(error || authLoading || listenerError) && (
         <div style={{ padding: "0 var(--space-4)", paddingTop: "var(--space-3)" }}>
           {authLoading && <p className="muted">Preparing your session…</p>}
+          {listenerError && (
+            <div className="error-banner" role="alert">
+              {listenerError}
+            </div>
+          )}
           {error && (
             <div className="error-banner" role="alert">
               {error}

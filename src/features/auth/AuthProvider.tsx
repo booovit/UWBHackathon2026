@@ -27,6 +27,8 @@ const AUTH_FALLBACK_MS = 4000;
 export interface AuthContextValue {
   user: User | null;
   isGuest: boolean;
+  /** True when not using real Firebase (no config) or using synthetic preview user. */
+  isDemoUser: boolean;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       isGuest: user?.isAnonymous ?? false,
+      isDemoUser: !firebaseConfigured || user?.uid === "demo-guest",
       loading,
       async signInWithGoogle() {
         const provider = new GoogleAuthProvider();

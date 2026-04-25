@@ -35,7 +35,7 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(
   app,
-  env.VITE_FUNCTIONS_REGION ?? "us-central1",
+  env.VITE_FUNCTIONS_REGION ?? "us-east1",
 );
 
 if (firebaseConfigured && env.VITE_USE_EMULATORS === "true") {

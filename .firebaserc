@@ -1,3 +1,5 @@
 {
-  "projects": {}
+  "projects": {
+    "default": "hackathonproject-4bd31"
+  }
 }
