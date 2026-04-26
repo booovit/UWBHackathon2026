@@ -18,4 +18,5 @@ export interface ChatMessage {
   artifactType?: StructuredArtifactType;
   artifact?: StructuredArtifact;
   timestamp?: Timestamp;
+  createdAt?: number;
 }

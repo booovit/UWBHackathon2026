@@ -30,13 +30,14 @@ const VALID_MODES: StudyMode[] = [
 ];
 
 const MODE_INSTRUCTIONS: Record<StudyMode, string> = {
-  chat: "Answer the user's question directly.",
+  chat:
+    "Answer the user's question directly. For longer answers, use short section labels and concise bullets. Do not use markdown heading symbols or decorative asterisks.",
   summary:
-    "Produce a clear summary with the key ideas and important terms first, then a short overview. Use short bullet points.",
+    "Produce a clear summary with the key ideas and important terms first, then a short overview. Use short section labels and concise bullets. Do not use markdown heading symbols or decorative asterisks.",
   simplify:
-    "Rewrite or explain the requested content in plain, simple language. Use shorter sentences and define hard terms.",
+    "Rewrite or explain the requested content in plain, simple language. Use shorter sentences, define hard terms, and use short section labels when helpful. Do not use markdown heading symbols or decorative asterisks.",
   quiz:
-    "Create study questions from the conversation or topic as JSON: [{\"prompt\":\"...\",\"kind\":\"mcq\",\"options\":[\"...\"],\"correctAnswer\":\"...\",\"explanation\":\"...\"}]. Use kind \"written\" for open questions. Output only the JSON array.",
+    "Create study questions from the conversation or topic as JSON: [{\"prompt\":\"...\",\"kind\":\"mcq\",\"options\":[\"...\"],\"correctAnswer\":\"...\",\"explanation\":\"...\"},{\"prompt\":\"...\",\"kind\":\"written\",\"correctAnswer\":\"Alliances\",\"acceptedAnswers\":[\"Alliances\",\"Imperialism\"],\"explanation\":\"...\"}]. Use kind \"written\" for open questions. For written questions, keep correctAnswer to one concise answer and put alternate valid answers in acceptedAnswers. Do not write \"possible answers include\" inside correctAnswer. Output only the JSON array.",
   flashcards:
     "Create study flashcards as a JSON array like [{\"front\":\"...\",\"back\":\"...\"}]. Output only the JSON array.",
   steps:
