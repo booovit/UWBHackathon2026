@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useProfile } from "@/features/profile/ProfileProvider";
 import { firebaseConfigured } from "@/lib/firebase";
 
 export function LoginPage() {
   const { user, isGuest, isDemoUser, signInWithGoogle, signInWithEmail, signUpWithEmail } =
     useAuth();
+  const { profile } = useProfile();
   const location = useLocation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -17,7 +19,9 @@ export function LoginPage() {
   if (user && !isGuest) {
     const from = (location.state as { from?: { pathname: string } })?.from
       ?.pathname;
-    return <Navigate to={from ?? "/dashboard"} replace />;
+    // Redirect to profile setup if onboarding not complete
+    const destination = profile.onboardingComplete ? (from ?? "/dashboard") : "/profile/setup";
+    return <Navigate to={destination} replace />;
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {

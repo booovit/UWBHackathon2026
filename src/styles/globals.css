@@ -935,3 +935,306 @@ legend {
     justify-content: center;
   }
 }
+
+/* Profile icon in header */
+.profile-icon-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.profile-avatar-small {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-border);
+  transition: border-color 120ms ease;
+}
+
+.profile-avatar-small:hover {
+  border-color: var(--color-primary);
+}
+
+.profile-icon-svg {
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+  color: var(--color-text);
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.profile-icon-svg:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-hover);
+}
+
+.profile-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  border: 2px solid var(--color-border);
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.profile-avatar-placeholder:hover {
+  border-color: var(--color-primary-hover);
+  transform: scale(1.05);
+}
+
+/* Profile page styles */
+.profile-page,
+.profile-setup-page {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.profile-container,
+.profile-setup-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.profile-header,
+.profile-setup-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.profile-header {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: left;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+}
+
+.avatar-image {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--color-border);
+}
+
+.avatar-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.8rem;
+}
+
+.profile-info h1 {
+  margin: 0;
+}
+
+.profile-form,
+.profile-setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.profile-section h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+/* Support cards */
+.support-cards,
+.support-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.support-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.support-card:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+}
+
+.support-card.selected {
+  border-color: var(--color-primary);
+  background: rgba(138, 166, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(138, 166, 255, 0.15);
+}
+
+[data-theme="light"] .support-card.selected {
+  background: rgba(47, 77, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(47, 77, 255, 0.12);
+}
+
+.support-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.support-card-content h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.support-card-content p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.support-card .helpful-for {
+  font-size: 0.85rem;
+  color: var(--color-primary);
+  font-style: italic;
+}
+
+.support-card-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary-contrast);
+  flex-shrink: 0;
+}
+
+.support-card.selected .support-card-check {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Checkbox group */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.checkbox-item:hover {
+  background: var(--color-surface-hover);
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.checkbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkbox-label {
+  font-weight: 600;
+}
+
+.checkbox-description {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* Custom notes textarea */
+.custom-notes-input {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Profile actions */
+.profile-actions,
+.profile-setup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.button.primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border-color: var(--color-primary);
+}
+
+.button.primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+@media (max-width: 600px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-actions,
+  .profile-setup-actions {
+    flex-direction: column;
+  }
+
+  .profile-actions .button,
+  .profile-setup-actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -8,6 +8,8 @@ import { LoginPage } from "@/routes/LoginPage";
 import { OnboardingPage } from "@/routes/OnboardingPage";
 import { DashboardPage } from "@/routes/DashboardPage";
 import { SettingsPage } from "@/routes/SettingsPage";
+import { ProfilePage } from "@/routes/ProfilePage";
+import { ProfileSetupPage } from "@/routes/ProfileSetupPage";
 import { StudyPage } from "@/routes/StudyPage";
 import { ThemeToggle } from "@/features/theme/ThemeProvider";
 
@@ -102,6 +104,22 @@ export function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/setup"
+            element={
+              <ProtectedRoute>
+                <ProfileSetupPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -112,6 +130,24 @@ export function App() {
 function LegacyDocumentRedirect() {
   const { docId } = useParams<{ docId: string }>();
   return <Navigate to={`/study/${docId ?? ""}`} replace />;
+}
+
+function ProfileIcon() {
+  return (
+    <svg
+      className="profile-icon-svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
 }
 
 function Header() {
@@ -134,27 +170,22 @@ function Header() {
           Library
         </Link>
         {isSignedIn && (
-          <Link to="/settings" className="button ghost">
-            Settings
+          <Link to="/profile" className="profile-icon-link" aria-label="Your profile">
+            <ProfileIcon />
           </Link>
         )}
         {isSignedIn ? (
-          <>
-            <span className="muted" aria-label="Signed in as">
-              {user?.email ?? "Signed in"}
-            </span>
-            <button
-              type="button"
-              className="button secondary"
-              onClick={() => {
-                void signOutUser().catch((err) => {
-                  console.error("Sign out failed", err);
-                });
-              }}
-            >
-              Sign out
-            </button>
-          </>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => {
+              void signOutUser().catch((err) => {
+                console.error("Sign out failed", err);
+              });
+            }}
+          >
+            Sign out
+          </button>
         ) : (
           <>
             <span className="badge" title="You're using Axessify as a guest">

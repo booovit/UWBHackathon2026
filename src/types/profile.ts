@@ -30,6 +30,10 @@ export interface StudyPreferences {
   oneStepAtATime: boolean;
   responseLength: ResponseLength;
   defaultStudyMode: StudyMode;
+  visualCues?: boolean;
+  bulletPoints?: boolean;
+  extendedTime?: boolean;
+  repeatInstructions?: boolean;
 }
 
 export interface FeedbackSignals {
@@ -45,6 +49,7 @@ export interface UserProfile {
   studyPreferences: StudyPreferences;
   feedbackSignals: FeedbackSignals;
   onboardingComplete: boolean;
+  customNotes: string;
   updatedAt?: unknown;
 }
 
@@ -73,4 +78,5 @@ export const defaultProfile: UserProfile = {
     highContrastUsedOften: false,
   },
   onboardingComplete: false,
+  customNotes: "",
 };
