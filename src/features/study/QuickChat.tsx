@@ -15,6 +15,8 @@ import type { Timestamp } from "firebase/firestore";
 import { db, firebaseConfigured } from "@/lib/firebase";
 import { callQuickChat } from "@/lib/functions";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useProfile } from "@/features/profile/ProfileProvider";
+import { STUDY_MODES } from "@/features/study/StudyModeSelector";
 
 interface QuickMessage {
   id: string;
@@ -42,6 +44,8 @@ const SUGGESTIONS = [
 
 export function QuickChat({ embedded }: { embedded?: boolean }) {
   const { user, loading: authLoading } = useAuth();
+  const { profile } = useProfile();
+  const mode = profile.studyPreferences.defaultStudyMode;
   const [messages, setMessages] = useState<QuickMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -123,7 +127,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      await callQuickChat({ message: trimmed });
+      await callQuickChat({ message: trimmed, mode });
       setInput("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
@@ -178,7 +182,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
               <span className="muted" style={{ fontSize: "0.78rem" }}>
                 {m.role === "user" ? "You" : "Tutor"}
               </span>
-              <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
+              <span className="message-content">{m.content}</span>
             </div>
           ))
         )}
@@ -187,7 +191,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
             <span className="muted" style={{ fontSize: "0.78rem" }}>
               Tutor
             </span>
-            <span>Thinking…</span>
+            <span className="message-content">Thinking…</span>
           </div>
         )}
       </div>
@@ -215,7 +219,8 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
           onChange={(e) => setInput(e.target.value)}
           placeholder={
             firebaseConfigured
-              ? "Ask the tutor anything…"
+              ? (STUDY_MODES.find((m) => m.value === mode)?.placeholder ??
+                "Ask the tutor anything…")
               : "Demo mode — type anything to see the chat layout."
           }
           rows={2}

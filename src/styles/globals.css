@@ -493,6 +493,13 @@ legend {
   max-width: 85%;
 }
 
+.message-content {
+  line-height: var(--line-height);
+  max-width: var(--max-line-width);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .message.user {
   background: var(--color-primary);
   color: var(--color-primary-contrast);
@@ -509,6 +516,32 @@ legend {
   background: var(--color-surface);
   align-self: flex-start;
   max-width: 95%;
+}
+
+[data-spacing="extra"] .message {
+  gap: var(--space-4);
+}
+
+[data-line-width="narrow"] .message {
+  max-width: min(95%, calc(var(--max-line-width) + 2rem));
+}
+
+[data-line-width="narrow"] .message.assistant {
+  max-width: min(95%, calc(var(--max-line-width) + 3rem));
+}
+
+[data-line-focus="true"] .chat-thread .message,
+[data-line-focus="true"] [aria-label="Study chat"] .message {
+  opacity: 0.55;
+}
+
+[data-line-focus="true"] .chat-thread .message:last-of-type,
+[data-line-focus="true"] .chat-thread .message:hover,
+[data-line-focus="true"] .chat-thread .message:focus-within,
+[data-line-focus="true"] [aria-label="Study chat"] .message:last-of-type,
+[data-line-focus="true"] [aria-label="Study chat"] .message:hover,
+[data-line-focus="true"] [aria-label="Study chat"] .message:focus-within {
+  opacity: 1;
 }
 
 .chat-shell {

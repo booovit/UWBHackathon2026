@@ -9,6 +9,7 @@ import { AccessibilityToolbar } from "@/features/reader/AccessibilityToolbar";
 import { DocumentReader } from "@/features/reader/DocumentReader";
 import { ChatPanel } from "@/features/study/ChatPanel";
 import { QuickChat } from "@/features/study/QuickChat";
+import { StudyModeSelector } from "@/features/study/StudyModeSelector";
 import { callRetryDocumentProcessing } from "@/lib/functions";
 
 export function StudyPage() {
@@ -61,6 +62,15 @@ function GeneralStudyView() {
           </div>
         </div>
       )}
+
+      <AccessibilityToolbar />
+
+      <div className="card stack" style={{ gap: "var(--space-3)" }}>
+        <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600 }}>
+          Study tools
+        </p>
+        <StudyModeSelector label="Default study mode" />
+      </div>
 
       <div className="card stack" style={{ gap: "var(--space-5)" }}>
         <div className="stack" style={{ gap: "var(--space-2)" }}>

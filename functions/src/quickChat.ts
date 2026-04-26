@@ -4,15 +4,39 @@ import { FUNCTIONS_REGION } from "./constants";
 import { db } from "./firebaseAdmin";
 import { GENERATION_MODEL, geminiApiKey, getGenAi } from "./geminiClient";
 import { badRequest, requireAuth } from "./errors";
-import type { UserProfile } from "./types";
+import type { StudyMode, UserProfile } from "./types";
 
 interface QuickChatRequest {
   message?: string;
+  mode?: StudyMode;
 }
 
 interface QuickChatResponse {
   content: string;
 }
+
+const VALID_MODES: StudyMode[] = [
+  "chat",
+  "summary",
+  "simplify",
+  "quiz",
+  "flashcards",
+  "steps",
+];
+
+const MODE_INSTRUCTIONS: Record<StudyMode, string> = {
+  chat: "Answer the user's question directly.",
+  summary:
+    "Produce a clear summary with the key ideas and important terms first, then a short overview. Use short bullet points.",
+  simplify:
+    "Rewrite or explain the requested content in plain, simple language. Use shorter sentences and define hard terms.",
+  quiz:
+    "Create study questions from the conversation or topic. Mix multiple-choice and short answer. Provide answer keys after each question.",
+  flashcards:
+    "Create study flashcards as a JSON array like [{\"front\":\"...\",\"back\":\"...\"}]. Output only the JSON array.",
+  steps:
+    "Break the requested task into a short, ordered list of concrete steps. One action per step.",
+};
 
 export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
   {
@@ -26,10 +50,12 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
     requireAuth(uid);
 
     const message = request.data?.message;
+    const mode = request.data?.mode ?? "chat";
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       badRequest("message is required");
     }
     if (message.length > 4000) badRequest("Message is too long.");
+    if (!VALID_MODES.includes(mode)) badRequest("Unknown study mode");
 
     const profileSnap = await db
       .collection("users")
@@ -64,7 +90,7 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
       model: GENERATION_MODEL,
       contents: buildPrompt(message, history),
       config: {
-        systemInstruction: buildSystemPrompt(profile),
+        systemInstruction: buildSystemPrompt(profile, mode),
         temperature: 0.5,
       },
     });
@@ -82,11 +108,13 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
     batch.set(messagesRef.doc(), {
       role: "user",
       content: message,
+      mode,
       timestamp: FieldValue.serverTimestamp(),
     });
     batch.set(messagesRef.doc(), {
       role: "assistant",
       content,
+      mode,
       timestamp: FieldValue.serverTimestamp(),
     });
     await batch.commit();
@@ -95,7 +123,7 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
   },
 );
 
-function buildSystemPrompt(profile: UserProfile): string {
+function buildSystemPrompt(profile: UserProfile, mode: StudyMode): string {
   const study = profile.studyPreferences ?? {};
   const supports = profile.supports ?? {};
   const notes: string[] = [];
@@ -122,6 +150,7 @@ function buildSystemPrompt(profile: UserProfile): string {
     "Help with studying, summarizing, simplifying, quizzing, and step-by-step explanations.",
     "Never diagnose the user or label them with a disability.",
     "When the user uploads a document later, your answers should ground in that document's content.",
+    `Mode-specific instruction: ${MODE_INSTRUCTIONS[mode]}`,
     notes.length > 0 ? `User support preferences:\n- ${notes.join("\n- ")}` : "",
   ]
     .filter(Boolean)

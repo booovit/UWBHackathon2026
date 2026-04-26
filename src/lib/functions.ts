@@ -25,6 +25,7 @@ export const callChatWithDocument = httpsCallable<ChatRequest, ChatResponse>(
 
 export interface QuickChatRequest {
   message: string;
+  mode?: StudyMode;
 }
 
 export interface QuickChatResponse {
