@@ -1,279 +1,314 @@
 # Axessify
 
-AI study help for PDFs, DOCX, and text: accessibility settings, document-grounded Gemini chat, and Firestore-backed profiles. Product details: [`ACCESSIBILITY_AI_STUDY_PLATFORM_PLAN.md`](./ACCESSIBILITY_AI_STUDY_PLATFORM_PLAN.md).
+Axessify is an accessibility-first AI study platform. It lets students chat with an AI tutor, upload course materials, generate study artifacts, and personalize the reading experience with supports for dyslexia, ADHD, low vision, and different study workflows.
 
-**Stack:** React (Vite) + Firebase (Auth, Firestore, Storage, Hosting, Functions) + Gemini (server only).
+## Current Features
 
-**Requirements:** Node **20** (see [`.nvmrc`](.nvmrc)), Firebase project on the **Blaze** plan, [Gemini API key](https://aistudio.google.com/app/apikey). Use `npm ci` and `npm --prefix functions ci` (lockfiles are committed).
+### AI Study Chat
 
----
+- General AI tutor chat before uploading a file.
+- Document-grounded AI chat after uploading a study document.
+- Separate chat threads per study mode in document chat.
+- Recent chat history included for context.
+- Friendly Gemini error handling for quota/API/config issues.
+- AI identity and prompts branded as Axessify.
 
-## What’s going on (check off)
+### Study Modes
 
-| Step | You |
-|------|-----|
-| Firebase app + Auth (Anonymous, Email, Google) + Firestore + Storage enabled | Console |
-| `VITE_FIREBASE_*` in **root `.env`** or **`.env.local`** (from Firebase project settings) | You |
-| **`.firebaserc`** has the right `default` project, or `npx firebase use --add` | You |
-| **`npx firebase login`** — Google account with deploy access | You |
-| **`GEMINI_API_KEY` in Google Secret Manager** (production Functions). **Not** the same as `.env` in the browser | Owner or you (if IAM allows) — see [secrets 403](#if-secrets-set-fails-403) |
-| **Deploy** | `npm run deploy` after the above |
+Axessify supports six study modes:
 
-**Local only:** `functions/.secret.local` = Gemini for the **emulator**. It does **not** deploy the key to production.
+- **Chat**: ask open-ended questions.
+- **Summary**: generate concise summaries.
+- **Simplify**: rewrite difficult content in simpler language.
+- **Quiz**: generate interactive quizzes.
+- **Flashcards**: generate interactive flashcard decks.
+- **Step-by-step**: break work into guided steps.
 
-**First vector index** can take a few minutes after the first `firestore:indexes` deploy — watch the Firestore “Indexes” tab in the console.
+These modes work in both:
 
-**Cloud Functions region** must match your **default Storage bucket** region. This repo uses **`us-east1`** in [`functions/src/constants.ts`](functions/src/constants.ts), applies it at runtime in [`functions/src/initRuntime.ts`](functions/src/initRuntime.ts), and uses the same default in [`src/lib/firebase.ts`](src/lib/firebase.ts). Set `VITE_FUNCTIONS_REGION` in `.env` to the same value, or the client will call the wrong region for callables. If deploy says a function *cannot listen to a bucket* in another region, align these.
+- General AI chat.
+- Uploaded document chat.
 
----
+### Interactive Study Artifacts
 
-## Commands
+- Flashcards render as clickable front/back cards.
+- Quizzes render as interactive questions with answer checking.
+- Step-by-step output renders as trackable tasks.
+- Generated flashcards can be saved to the library.
+- Generated quizzes can be saved to the library.
+- Structured artifact parsing happens in Firebase Functions.
 
-### Install
+### Document Upload And Processing
+
+- Upload PDF, DOCX, or text-based study materials.
+- Files are stored in Firebase Storage.
+- Document records and chunks are stored in Firestore.
+- Cloud Functions extract text, chunk content, generate embeddings, and prepare documents for retrieval.
+- Failed document processing can be retried.
+- Document status and processing stage are visible in the UI.
+
+### Document Reader
+
+- Displays extracted document chunks.
+- Shows page numbers when available.
+- Supports read-aloud controls.
+- Supports one-step-at-a-time reading.
+- Supports line focus while reading.
+- Works side-by-side with document chat.
+
+### Accessibility Controls
+
+Controls appear before upload and inside document study views:
+
+- Increase text size.
+- Decrease text size.
+- Dyslexic font toggle using OpenDyslexic.
+- Extra spacing.
+- Line focus.
+- Narrow lines.
+- Big Font toggle in the top navigation.
+- Dark, light, and high-contrast theme toggle in the top navigation.
+- Reduced motion preference through settings.
+
+The Dyslexic button itself always uses the dyslexia font, even when the setting is off.
+
+### User Profiles And Preferences
+
+- Accessibility profile saved per user.
+- Supports settings for dyslexia, ADHD/focus, and low vision.
+- Display preferences include text size, Dyslexic font, high contrast, extra spacing, line focus, narrow line width, and reduced motion.
+- Study preferences include response length, default study mode, read-aloud controls, simplified language, and one-step-at-a-time support.
+- Guest/demo mode supported for local preview.
+
+### Authentication
+
+- Firebase Auth integration.
+- Guest session support.
+- Email/password sign-in.
+- Google sign-in.
+- Protected routes for Study, Dashboard, Settings, and Onboarding.
+
+### Library And Dashboard
+
+The Library page includes:
+
+- General study chat entry.
+- Uploaded document list.
+- Document-scoped chat links.
+- Study folders.
+- Saved flashcard decks.
+- Saved quizzes.
+- Folder creation and deletion.
+- Add/remove documents from folders.
+- LocalStorage fallback for preview/demo sessions.
+- Firestore-backed persistence for signed-in users.
+
+### Frontend UI
+
+- React + Vite app.
+- Responsive dashboard and study workspace.
+- Header navigation with Study, Library, Settings, theme controls, and Big Font.
+- Accessibility controls moved before upload so users can configure the experience before chatting or adding files.
+- Axessify branding across the UI.
+
+### Backend
+
+- Firebase Cloud Functions Gen 2.
+- Firebase Admin SDK.
+- Gemini generation and embeddings through server-side Functions only.
+- Firestore rules and indexes.
+- Storage rules.
+- Secret Manager for production Gemini API key.
+- `functions/.secret.local` for local emulator Gemini key.
+
+## Stack
+
+- React
+- Vite
+- TypeScript
+- Firebase Auth
+- Firebase Firestore
+- Firebase Storage
+- Firebase Functions
+- Gemini API
+- Netlify-compatible frontend build
+
+## Requirements
+
+- Node 20
+- npm
+- Java for Firebase emulators
+- Firebase project on Blaze plan
+- Gemini API key
+- Firebase CLI through `npx firebase`
+
+## Environment Variables
+
+Create a root `.env.local` or `.env` with:
+
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FUNCTIONS_REGION=us-east1
+VITE_USE_EMULATORS=true
+```
+
+For Netlify or production frontend deploys:
+
+```env
+VITE_USE_EMULATORS=false
+```
+
+Do not put the Gemini key in a `VITE_*` variable.
+
+For local Functions emulators, create:
+
+```txt
+functions/.secret.local
+```
+
+with:
+
+```env
+GEMINI_API_KEY=your-gemini-key
+```
+
+For production Firebase Functions:
 
 ```bash
-nvm use 20    # or install Node 20; optional if nvm is set up
+npx firebase functions:secrets:set GEMINI_API_KEY
+```
+
+## Install
+
+```bash
 npm ci
 npm --prefix functions ci
 ```
 
-If you stay on Node 25, npm will still build, but you will keep seeing **engine warnings** from Firebase tooling and Cloud Functions packages. Node 20 matches this repo and Google Cloud Functions.
+## Local Development
 
-### Local quick start (recommended)
+Run two terminals from the repo root.
 
-This repo is configured to use Firebase emulators by default (`VITE_USE_EMULATORS=true` in the root `.env`). You run **two terminals** from the **repo root** (the folder that contains `package.json` and `firebase.json`).
-
-> The Firebase emulator suite requires **Java** on `PATH`. If `npx firebase emulators:start` fails with `Unable to locate a Java Runtime`, install Java first (see below) or use [Local frontend only](#local-frontend-only).
-
-#### One-time setup (machine + repo)
+Terminal 1:
 
 ```bash
-# macOS (Homebrew) — Java for emulators:
-brew install openjdk@21
-echo 'export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"' >> ~/.zprofile
-source ~/.zprofile
-java -version
-
-# From repo root — install deps (after clone or lockfile changes):
-nvm use 20    # optional; or install Node 20 from nodejs.org
-npm ci
-npm --prefix functions ci
-
-# Gemini for Functions *emulator only* (gitignored):
-printf 'GEMINI_API_KEY=your-gemini-key-here\n' > functions/.secret.local
-```
-
-Ensure root **`.env`** exists with your `VITE_FIREBASE_*` values and `VITE_USE_EMULATORS=true` (or copy from a teammate if `.env` is not in git).
-
-#### Run on your screen (exact two-terminal flow)
-
-Use **Terminal.app**, iTerm, or Cursor’s integrated terminal. **Start emulators first**, wait for readiness, then start Vite.
-
-**Terminal 1 — emulators** (same shell must see `java`; on Apple Silicon Homebrew OpenJDK 21):
-
-```bash
-cd /path/to/UWBHackathon2026
-export PATH="/opt/homebrew/opt/openjdk@21/bin:$PATH"
 npx firebase emulators:start --only auth,functions,firestore,storage
 ```
 
-Leave this running. Wait until you see **`All emulators ready! It is now safe to connect your app.`** and the port table (Auth `9099`, Functions `5001`, Firestore `8080`, Storage `9199`).
-
-**Terminal 2 — Vite** (open a *new* tab/window after the line above appears):
+Terminal 2:
 
 ```bash
-cd /path/to/UWBHackathon2026
 npm run dev -- --port 5173 --strictPort
 ```
 
-**Open in the browser**
+Open:
 
 - App: `http://localhost:5173`
 - Emulator UI: `http://127.0.0.1:4000`
 
-If the first page load shows Firestore “could not reach backend” / offline warnings in the Vite terminal, wait for **All emulators ready** in Terminal 1, then **refresh** the browser once. That happens when the UI loads a moment before Firestore is accepting connections.
+## Build
 
-Optional explicit override (only if you are not using `VITE_USE_EMULATORS=true` in `.env`):
+Frontend:
 
 ```bash
-VITE_USE_EMULATORS=true npm run dev -- --port 5173 --strictPort
+npm run build
 ```
 
-#### Stop everything
+Functions:
 
 ```bash
-lsof -nP -iTCP:5173,5001,8080,9099,9199,4000,4400 -sTCP:LISTEN
-kill <PID>    # repeat for each PID listed (node / java)
+npm --prefix functions run build
 ```
 
-Or press **Ctrl+C** in each terminal that is still running.
+## Firebase Deploy
 
-Why `--only auth,functions,firestore,storage`? The app is served by Vite, so the Firebase Hosting emulator is optional and skipping it avoids port clashes (for example on `5000`).
-
-**What you get**
-
-- React app on Vite
-- Auth / Firestore / Storage / Functions emulators from [`firebase.json`](./firebase.json)
-- Gemini in the Functions emulator via `functions/.secret.local`
-
-### Local frontend only
-
-If you only want to verify the UI against the deployed Firebase project without backend emulators, override the default emulator setting for that terminal:
+Set the Gemini secret first:
 
 ```bash
-VITE_USE_EMULATORS=false npm run dev -- --port 5173 --strictPort
-```
-
-If anonymous auth is disabled in the live Firebase project, use the normal sign-in flow on `/login` instead of relying on guest auth.
-
-### Production: set Gemini + deploy
-
-Use an account that is allowed to create secrets (or ask the [project owner](#if-secrets-set-fails-403) to do the first line once):
-
-```bash
-npx firebase login
-npx firebase use   # should show your .firebaserc project
-
-# Production Gemini (Secret Manager) — not your client .env
 npx firebase functions:secrets:set GEMINI_API_KEY
-# optional first pass for rules + indexes:
-# npx firebase deploy --only firestore:rules,storage:rules,firestore:indexes
+```
 
+Deploy backend services:
+
+```bash
+npx firebase deploy --only functions,firestore:rules,firestore:indexes,storage
+```
+
+Full Firebase deploy, including hosting:
+
+```bash
 npm run deploy
 ```
 
-`npm run deploy` = Vite production build + `firebase deploy` (hosting, functions, rules, indexes as in [`firebase.json`](./firebase.json)).
+## Netlify Deploy
 
-**Only part of the app changed?**
+Netlify should host the frontend only. Firebase still hosts Functions, Auth, Firestore, and Storage.
 
-```bash
-npx firebase deploy --only hosting
-npx firebase deploy --only functions
+Netlify build settings:
+
+```txt
+Build command: npm run build
+Publish directory: dist
 ```
 
-**CI:** use a [Firebase / Google Cloud service account or token](https://firebase.google.com/docs/cli#install-cli) instead of an interactive login.
+Add these environment variables in Netlify:
 
-### First-time `firebase deploy` (Functions) — IAM
-
-If deploy stops with *“We failed to modify the IAM policy for the project”* (Gen2 / Eventarc / Cloud Run), the app code is usually fine; Google Cloud just has not granted the required service-agent roles yet.
-
-A **project Owner** or someone with **Owner** / **Project IAM Admin** should either:
-
-1. Run `npx firebase deploy` again while logged in as an owner, or
-2. Run the exact `gcloud projects add-iam-policy-binding ...` commands the Firebase CLI printed.
-
-For this project (`hackathonproject-4bd31`), Firebase asked for:
-
-```bash
-gcloud projects add-iam-policy-binding hackathonproject-4bd31 \
-  --member=serviceAccount:service-216621022534@gs-project-accounts.iam.gserviceaccount.com \
-  --role=roles/pubsub.publisher
-
-gcloud projects add-iam-policy-binding hackathonproject-4bd31 \
-  --member=serviceAccount:service-216621022534@gcp-sa-pubsub.iam.gserviceaccount.com \
-  --role=roles/iam.serviceAccountTokenCreator
-
-gcloud projects add-iam-policy-binding hackathonproject-4bd31 \
-  --member=serviceAccount:216621022534-compute@developer.gserviceaccount.com \
-  --role=roles/run.invoker
-
-gcloud projects add-iam-policy-binding hackathonproject-4bd31 \
-  --member=serviceAccount:216621022534-compute@developer.gserviceaccount.com \
-  --role=roles/eventarc.eventReceiver
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FUNCTIONS_REGION=us-east1
+VITE_USE_EMULATORS=false
 ```
 
-That is normally a **one-time project setup** for Gen2 Functions. After it is done, `npm run deploy` should get past this blocker.
+After Netlify deploys, add the Netlify domain in Firebase:
 
-### Set the Gemini secret (when the CLI asks for a value)
-
-For `npx firebase functions:secrets:set GEMINI_API_KEY`, **paste the Gemini API key** from [AI Studio](https://aistudio.google.com/app/apikey) as the value (not the Firebase web `apiKey` from the console). Then deploy so functions pick it up.
-
-### Check that you are ready to deploy
-
-```bash
-npx firebase login:list          # should list your Google account
-npx firebase use                 # should show your project id (see .firebaserc)
-npx firebase functions:secrets:describe GEMINI_API_KEY   # should show a version, e.g. ENABLED
-npm run build && npm --prefix functions run build
-npx firebase deploy
+```txt
+Firebase Console -> Authentication -> Settings -> Authorized domains
 ```
 
-If `deploy` succeeds, use the **Hosting** URL in the output and test upload → document **ready** → chat.
+## Repo Map
 
----
+- `src/`: React frontend.
+- `src/features/study/`: chat, study modes, artifact renderers.
+- `src/features/reader/`: document reader and accessibility toolbar.
+- `src/features/library/`: folders, flashcards, quizzes.
+- `src/features/profile/`: profile and accessibility preferences.
+- `src/routes/`: page routes.
+- `functions/src/`: Firebase Functions, Gemini, document processing, artifact parsing.
+- `firestore.rules`: Firestore security rules.
+- `storage.rules`: Storage security rules.
+- `firestore.indexes.json`: Firestore indexes.
 
-## If `secrets:set` fails (403)
+## Manual Test Checklist
 
-The CLI user needs IAM on the **Google Cloud** project (same id as Firebase). A **project Owner** should either:
+1. App loads and shows Axessify branding.
+2. Theme toggle works.
+3. Big Font works.
+4. Accessibility toolbar controls work before upload.
+5. Dyslexic font toggles only the font.
+6. General AI chat works.
+7. General flashcard, quiz, and step-by-step modes render interactive artifacts.
+8. Document upload works.
+9. Uploaded document reaches ready state.
+10. Document chat answers are grounded in the uploaded file.
+11. Document flashcards and quizzes can be saved to the library.
+12. Library shows folders, documents, flashcards, and quizzes.
+13. Sign-in works.
+14. Firestore and Storage rules deploy successfully.
 
-- Add your Google account: **Service Usage Consumer** and **Secret Manager Admin** (or **Editor** for a small team), and enable the [Secret Manager API](https://console.cloud.google.com/apis/library/secretmanager.googleapis.com?project=_), *or*
-- Run `npx firebase functions:secrets:set GEMINI_API_KEY` once themselves, then you deploy.
+## Notes
 
-Direct IAM: `https://console.cloud.google.com/iam-admin/iam?project=<project-id>` (id is in [`.firebaserc`](.firebaserc)). Wait a few minutes after role changes, then retry.
-
----
-
-## Where keys live
-
-| What | Where |
-|------|--------|
-| `VITE_FIREBASE_*` | Root `.env.local` / `.env` — public to the **browser** after Vite build |
-| `GEMINI_API_KEY` (cloud) | **Secret Manager** — set with `npx firebase functions:secrets:set` |
-| `GEMINI_API_KEY` (emulator) | `functions/.secret.local` (gitignored) |
-
-The Gemini key never goes in a `VITE_*` variable.
-
----
-
-## Deployment concerns
-
-- **Region coupling:** the Storage trigger must stay in the same region as the default bucket. This repo is currently wired for **`us-east1`**.
-- **First deploy IAM:** Gen2 Functions may fail until a project owner grants the Google-managed service accounts the required Eventarc / PubSub / Run roles.
-- **Node version:** local development and deploys are expected on **Node 20**.
-- **Frontend bundle warning:** the production bundle currently exceeds Vite's 500 kB warning threshold. It still builds successfully, but code-splitting would be a good follow-up before the app grows further.
-- **Outdated platform warning:** Firebase currently warns that Cloud Functions Node 20 will age out later in 2026 and that `firebase-functions` is not the latest major. That is not blocking today, but it should be scheduled.
-
----
-
-## Repo map (short)
-
-- `src/` — React app (`lib/firebase.ts`, `lib/functions.ts`, `features/`)
-- `functions/` — Cloud Functions + Gemini
-- `firestore.rules`, `storage.rules`, `firestore.indexes.json` — backend policy + indexes
-
-Deeper structure and team tracks are in the [plan](ACCESSIBILITY_AI_STUDY_PLATFORM_PLAN.md).
-
-**New packages:** add in root or `functions/`, then commit the matching `package-lock.json` and use `npm ci` everywhere.
-
----
-
-## Library (Dashboard)
-
-The **Library** page (`/dashboard`) includes:
-
-- **Chats** — links to general study (`/study`) and each uploaded document (`/study/:docId`).
-- **Folders** — create folders, add/remove documents, delete folders. With Firebase: stored under `users/{uid}/folders`. Without full config (preview / demo session): stored in **localStorage** for this browser only.
-- **Flashcards** — saved sets from document study: use **Flashcards** mode in the doc chat panel, then **Save to library** on a tutor reply. Stored under `users/{uid}/flashcardDecks` (or localStorage in preview).
-- **Quizzes** — same flow with **Quiz** mode and **Save quiz to library**. Stored under `users/{uid}/quizzes` (or localStorage in preview).
-
-Deploy updated **Firestore rules and indexes** after pulling changes:
-
-```bash
-npx firebase deploy --only firestore:rules,firestore:indexes
-```
-
-### Preview vs live
-
-| Mode | What works |
-|------|------------|
-| **No `VITE_FIREBASE_*` (or incomplete)** | UI runs; auth uses a local preview user; library folders/decks/quizzes persist in `localStorage` only. |
-| **Full Firebase + Anonymous / sign-in** | Real Auth + Firestore; library syncs to the cloud (per user). |
-| **Anonymous disabled** | Sign in with Google/email from `/login` (still reachable as a guest). Auth falls back to a local session if anonymous sign-in fails. |
-| **Auth fallback (local session)** | If Firebase is configured but you are not actually signed in to Auth (rare fallback), accessibility settings stay in memory for the tab; library still uses `localStorage` like preview. |
-
-### Quick manual check
-
-1. **Study** and **Library** in the header load (no stuck “Loading…”).  
-2. **Login** — guest can open the form; after **real** sign-in, library is tied to that account.  
-3. **Dashboard** — create a folder, add a document from the dropdown, delete a folder.  
-4. Open a **ready** document in Study — toggle modes, **Save to library** / **Save quiz to library**; confirm items appear on the dashboard.
+- Gemini API keys must stay server-side.
+- `functions/.secret.local` is for local emulators only.
+- Production Gemini secrets live in Google Secret Manager.
+- Node 20 is the expected runtime for Functions.
+- The frontend bundle currently builds successfully but may show a Vite chunk-size warning.
