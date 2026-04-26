@@ -132,6 +132,25 @@ function LegacyDocumentRedirect() {
   return <Navigate to={`/study/${docId ?? ""}`} replace />;
 }
 
+function ProfileIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
 function Header() {
   const { user, isGuest, signOutUser } = useAuth();
   const isSignedIn = Boolean(user) && !isGuest;
@@ -152,15 +171,12 @@ function Header() {
           Library
         </Link>
         {isSignedIn && (
-          <Link to="/settings" className="button ghost">
-            Settings
+          <Link to="/profile" className="button ghost" aria-label="Profile">
+            <ProfileIcon />
           </Link>
         )}
         {isSignedIn ? (
           <>
-            <span className="muted" aria-label="Signed in as">
-              {user?.email ?? "Signed in"}
-            </span>
             <button
               type="button"
               className="button secondary"
