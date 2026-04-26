@@ -32,12 +32,21 @@ interface Props {
 
 function sortMessages(messages: ChatMessage[]) {
   return [...messages].sort((a, b) => {
-    const timeA = a.timestamp?.toMillis() ?? 0;
-    const timeB = b.timestamp?.toMillis() ?? 0;
+    const timeA = a.timestamp?.toMillis() ?? a.createdAt ?? 0;
+    const timeB = b.timestamp?.toMillis() ?? b.createdAt ?? 0;
     if (timeA !== timeB) return timeA - timeB;
     if (a.role !== b.role) return a.role === "user" ? -1 : 1;
     return a.id.localeCompare(b.id);
   });
+}
+
+function hasSavedMatch(saved: ChatMessage[], pending: ChatMessage) {
+  return saved.some(
+    (message) =>
+      message.role === pending.role &&
+      message.content === pending.content &&
+      message.mode === pending.mode,
+  );
 }
 
 export function ChatPanel({ docId, documentTitle }: Props) {
@@ -49,6 +58,9 @@ export function ChatPanel({ docId, documentTitle }: Props) {
   );
   const [chatIdByMode, setChatIdByMode] = useState<Partial<Record<StudyMode, string>>>({});
   const [messagesByChat, setMessagesByChat] = useState<Record<string, ChatMessage[]>>({});
+  const [pendingMessagesByMode, setPendingMessagesByMode] = useState<
+    Partial<Record<StudyMode, ChatMessage[]>>
+  >({});
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +70,11 @@ export function ChatPanel({ docId, documentTitle }: Props) {
 
   const activeChatId = chatIdByMode[mode] ?? null;
   const messages = activeChatId ? (messagesByChat[activeChatId] ?? []) : [];
+  const pendingMessages = pendingMessagesByMode[mode] ?? [];
+  const visibleMessages = useMemo(
+    () => sortMessages([...messages, ...pendingMessages]),
+    [messages, pendingMessages],
+  );
 
   useEffect(() => {
     if (!activeChatId) {
@@ -81,6 +98,12 @@ export function ChatPanel({ docId, documentTitle }: Props) {
           ),
         );
         setMessagesByChat((prev) => ({ ...prev, [activeChatId]: next }));
+        setPendingMessagesByMode((prev) => ({
+          ...prev,
+          [mode]: (prev[mode] ?? []).filter(
+            (pending) => !hasSavedMatch(next, pending),
+          ),
+        }));
       },
       (err) => {
         setListenerError(
@@ -88,14 +111,14 @@ export function ChatPanel({ docId, documentTitle }: Props) {
         );
       },
     );
-  }, [docId, activeChatId]);
+  }, [docId, activeChatId, mode]);
 
   useEffect(() => {
     listRef.current?.scrollTo({
       top: listRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages]);
+  }, [visibleMessages]);
 
   const placeholder = useMemo(
     () => STUDY_MODES.find((m) => m.value === mode)?.placeholder ?? "",
@@ -104,7 +127,22 @@ export function ChatPanel({ docId, documentTitle }: Props) {
 
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!input.trim() || busy) return;
+    const trimmed = input.trim();
+    if (!trimmed || busy) return;
+    const optimisticUserMessage: ChatMessage = {
+      id: `pending-${Date.now()}-${Math.random()}`,
+      role: "user",
+      content: trimmed,
+      retrievedChunkIds: [],
+      citations: [],
+      mode,
+      createdAt: Date.now(),
+    };
+    setPendingMessagesByMode((prev) => ({
+      ...prev,
+      [mode]: [...(prev[mode] ?? []), optimisticUserMessage],
+    }));
+    setInput("");
     setBusy(true);
     setError(null);
     try {
@@ -112,14 +150,13 @@ export function ChatPanel({ docId, documentTitle }: Props) {
       const result = await callChatWithDocument({
         docId,
         chatId: currentChatId,
-        message: input.trim(),
+        message: trimmed,
         mode,
       });
       const returnedId = result.data.chatId;
       setChatIdByMode((prev) =>
         prev[mode] === returnedId ? prev : { ...prev, [mode]: returnedId },
       );
-      setInput("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
     } finally {
@@ -206,13 +243,13 @@ export function ChatPanel({ docId, documentTitle }: Props) {
         }}
         aria-live="polite"
       >
-        {messages.length === 0 ? (
+        {visibleMessages.length === 0 ? (
           <p className="muted">
             Ask a question or pick a study mode. Answers are grounded in this
             document and shaped by your accessibility profile.
           </p>
         ) : (
-          messages.map((m) => (
+          visibleMessages.map((m) => (
             <div key={m.id} className={`message ${m.role}`}>
               <span className="muted" style={{ fontSize: "0.85em" }}>
                 {m.role === "user" ? "You" : "Tutor"} · {m.mode ?? "chat"}

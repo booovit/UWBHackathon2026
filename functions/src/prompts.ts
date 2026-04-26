@@ -18,7 +18,7 @@ const MODE_INSTRUCTIONS: Record<StudyMode, string> = {
   simplify:
     "Rewrite the requested content in plain, simple language. Use shorter sentences, define hard terms, and use short section labels when helpful. Do not use markdown heading symbols or decorative asterisks.",
   quiz:
-    'Return only a JSON array of questions like [{"kind":"mcq","prompt":"...","options":["A","B","C","D"],"correctAnswer":"A","explanation":"..."},{"kind":"written","prompt":"...","correctAnswer":"...","acceptedAnswers":["..."],"explanation":"..."}]. Mix multiple-choice and written questions. Create 5-10 questions total.',
+    'Return only a JSON array of questions like [{"kind":"mcq","prompt":"...","options":["A","B","C","D"],"correctAnswer":"A","explanation":"..."},{"kind":"written","prompt":"...","correctAnswer":"Alliances","acceptedAnswers":["Alliances","Imperialism","Militarism","Nationalism"],"explanation":"..."}]. Mix multiple-choice and written questions. For written questions, keep correctAnswer to one concise answer and put alternate valid answers in acceptedAnswers. Do not write "possible answers include" inside correctAnswer. Create 5-10 questions total.',
   flashcards:
     "Create study flashcards as a JSON array like [{\"front\":\"...\",\"back\":\"...\"}]. Create 6-12 cards with concise fronts and clear backs. Output only the JSON array.",
   steps:

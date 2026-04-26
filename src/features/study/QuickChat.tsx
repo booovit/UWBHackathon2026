@@ -31,16 +31,26 @@ interface QuickMessage {
   artifactType?: StructuredArtifactType;
   artifact?: StructuredArtifact;
   timestamp?: Timestamp;
+  createdAt?: number;
 }
 
 function sortMessages(messages: QuickMessage[]) {
   return [...messages].sort((a, b) => {
-    const timeA = a.timestamp?.toMillis() ?? 0;
-    const timeB = b.timestamp?.toMillis() ?? 0;
+    const timeA = a.timestamp?.toMillis() ?? a.createdAt ?? 0;
+    const timeB = b.timestamp?.toMillis() ?? b.createdAt ?? 0;
     if (timeA !== timeB) return timeA - timeB;
     if (a.role !== b.role) return a.role === "user" ? -1 : 1;
     return a.id.localeCompare(b.id);
   });
+}
+
+function hasSavedMatch(saved: QuickMessage[], pending: QuickMessage) {
+  return saved.some(
+    (message) =>
+      message.role === pending.role &&
+      message.content === pending.content &&
+      (message.mode ?? "") === (pending.mode ?? ""),
+  );
 }
 
 const SUGGESTIONS = [
@@ -55,6 +65,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
   const { profile } = useProfile();
   const mode = profile.studyPreferences.defaultStudyMode;
   const [messages, setMessages] = useState<QuickMessage[]>([]);
+  const [pendingMessages, setPendingMessages] = useState<QuickMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +75,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
   useEffect(() => {
     if (!user || !firebaseConfigured) {
       setMessages([]);
+      setPendingMessages([]);
       setListenerError(null);
       return;
     }
@@ -76,12 +88,14 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       q,
       (snap) => {
         setListenerError(null);
-        setMessages(
-          sortMessages(
-            snap.docs.map(
-              (d) => ({ id: d.id, ...(d.data() as Omit<QuickMessage, "id">) }),
-            ),
+        const savedMessages = sortMessages(
+          snap.docs.map(
+            (d) => ({ id: d.id, ...(d.data() as Omit<QuickMessage, "id">) }),
           ),
+        );
+        setMessages(savedMessages);
+        setPendingMessages((prev) =>
+          prev.filter((pending) => !hasSavedMatch(savedMessages, pending)),
         );
       },
       (err) => {
@@ -97,7 +111,9 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       top: listRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages]);
+  }, [messages, pendingMessages]);
+
+  const visibleMessages = sortMessages([...messages, ...pendingMessages]);
 
   function appendLocal(role: "user" | "assistant", content: string) {
     setMessages((prev) => [
@@ -106,6 +122,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
         id: `local-${Date.now()}-${Math.random()}`,
         role,
         content,
+        createdAt: Date.now(),
       },
     ]);
   }
@@ -132,11 +149,21 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       setError("Still preparing your session — try again in a second.");
       return;
     }
+    setPendingMessages((prev) => [
+      ...prev,
+      {
+        id: `pending-${Date.now()}-${Math.random()}`,
+        role: "user",
+        content: trimmed,
+        mode,
+        createdAt: Date.now(),
+      },
+    ]);
+    setInput("");
     setBusy(true);
     setError(null);
     try {
       await callQuickChat({ message: trimmed, mode });
-      setInput("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
     } finally {
@@ -159,7 +186,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       </h2>
 
       <div ref={listRef} className="chat-thread" aria-live="polite">
-        {messages.length === 0 ? (
+        {visibleMessages.length === 0 ? (
           <div className="empty">
             <strong style={{ fontSize: "1.05rem" }}>
               Ask the tutor anything
@@ -185,7 +212,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
             </div>
           </div>
         ) : (
-          messages.map((m) => (
+          visibleMessages.map((m) => (
             <div key={m.id} className={`message ${m.role}`}>
               <span className="muted" style={{ fontSize: "0.78rem" }}>
                 {m.role === "user" ? "You" : "Tutor"}

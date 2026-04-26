@@ -185,11 +185,36 @@ export function FlashcardDeckViewer({
 
 const STOP_WORDS = new Set([
   "a", "an", "the",
-  "is", "are", "was", "were", "be", "been", "being",
+  "is", "are", "was", "were", "be", "been", "being", "use", "uses", "used",
   "of", "to", "in", "on", "at", "for", "from", "with",
   "and", "or", "but",
   "that", "this", "these", "those", "it", "its",
+  "answer", "answers", "include", "includes", "including", "possible",
+  "acceptable", "example", "examples",
 ]);
+
+const EQUIVALENT_TERMS: string[][] = [
+  ["make", "makes", "making", "produce", "produces", "producing", "create", "creates", "creating", "convert", "converts", "converting", "form", "forms", "forming"],
+  ["food", "glucose", "sugar", "sugars", "carbohydrate", "carbohydrates", "chemical", "energy"],
+  ["plant", "plants", "algae", "bacteria", "organism", "organisms", "autotroph", "autotrophs"],
+  ["sunlight", "light", "solar"],
+  ["carbon", "dioxide", "co2"],
+  ["oxygen", "o2"],
+  ["water", "h2o"],
+  ["cause", "causes", "reason", "reasons", "factor", "factors"],
+  ["effect", "effects", "result", "results", "outcome", "outcomes"],
+  ["important", "significant", "key", "main", "major"],
+  ["increase", "increases", "increased", "rise", "rises", "rose", "growth", "grow", "grows"],
+  ["decrease", "decreases", "decreased", "fall", "falls", "fell", "decline", "declines"],
+];
+
+function stemToken(token: string): string {
+  if (token.length > 5 && token.endsWith("ing")) return token.slice(0, -3);
+  if (token.length > 4 && token.endsWith("ies")) return `${token.slice(0, -3)}y`;
+  if (token.length > 4 && token.endsWith("ed")) return token.slice(0, -2);
+  if (token.length > 3 && token.endsWith("s")) return token.slice(0, -1);
+  return token;
+}
 
 function normalizeAnswer(value: string): string {
   return value
@@ -202,7 +227,22 @@ function normalizeAnswer(value: string): string {
 function tokenize(value: string): string[] {
   return normalizeAnswer(value)
     .split(" ")
+    .map(stemToken)
     .filter((tok) => tok && !STOP_WORDS.has(tok));
+}
+
+function expandedTokenSet(value: string): Set<string> {
+  const baseTokens = tokenize(value);
+  const expanded = new Set(baseTokens);
+  for (const token of baseTokens) {
+    for (const group of EQUIVALENT_TERMS) {
+      const normalizedGroup = group.map(stemToken);
+      if (normalizedGroup.includes(token)) {
+        normalizedGroup.forEach((term) => expanded.add(term));
+      }
+    }
+  }
+  return expanded;
 }
 
 function levenshtein(a: string, b: string): number {
@@ -242,13 +282,21 @@ function fuzzyMatch(user: string, target: string): boolean {
   const userTokens = tokenize(user);
   const targetTokens = tokenize(target);
   if (targetTokens.length === 0) return false;
-  const targetSet = new Set(targetTokens);
-  const overlap = userTokens.filter((tok) => targetSet.has(tok));
+  const userSet = expandedTokenSet(user);
+  const targetSet = expandedTokenSet(target);
+  const overlap = targetTokens.filter((tok) => userSet.has(tok));
   const recall = overlap.length / targetTokens.length;
-  const precision = userTokens.length ? overlap.length / userTokens.length : 0;
+  const userOverlap = userTokens.filter((tok) => targetSet.has(tok));
+  const precision = userTokens.length ? userOverlap.length / userTokens.length : 0;
 
   // All key tokens covered and answer not absurdly padded → accept.
   if (recall === 1 && userTokens.length <= targetTokens.length * 4) {
+    return true;
+  }
+  if (targetTokens.length <= 6 && recall >= 0.6 && userTokens.length >= targetTokens.length) {
+    return true;
+  }
+  if (targetTokens.length <= 4 && overlap.length >= 2 && userTokens.length >= targetTokens.length) {
     return true;
   }
   if (recall + precision === 0) return false;
@@ -256,13 +304,58 @@ function fuzzyMatch(user: string, target: string): boolean {
   return f1 >= 0.7;
 }
 
+function extractAnswerOptions(value: string): string[] {
+  const withoutPrefix = value
+    .replace(
+      /^(?:possible|acceptable|correct)?\s*(?:answers?|responses?)\s+(?:can\s+)?(?:include|includes|are|is)\s*:?\s*/i,
+      "",
+    )
+    .replace(/^(?:any\s+of|examples?\s+include|such\s+as)\s*:?\s*/i, "")
+    .replace(/[.!?]+$/g, "")
+    .trim();
+
+  if (!withoutPrefix) return [];
+
+  return withoutPrefix
+    .split(/\s*(?:,|;|\/|\bor\b|\band\b)\s*/i)
+    .map((part) => part.replace(/^[\s"'(]+|[\s"')]+$/g, "").trim())
+    .filter((part) => tokenize(part).length > 0);
+}
+
+function buildAnswerPool(question: StructuredQuizQuestion): string[] {
+  const rawAnswers = [
+    question.correctAnswer,
+    ...(question.acceptedAnswers ?? []),
+  ];
+  const expanded = rawAnswers.flatMap((answer) => [
+    answer,
+    ...extractAnswerOptions(answer),
+  ]);
+  return Array.from(new Set(expanded.map((answer) => answer.trim()).filter(Boolean)));
+}
+
+function conceptPoolMatch(user: string, pool: string[]): boolean {
+  const userTokens = tokenize(user);
+  if (userTokens.length === 0) return false;
+
+  const conceptTokenSet = new Set(
+    pool.flatMap((answer) => tokenize(answer)),
+  );
+  if (conceptTokenSet.size === 0) return false;
+
+  return userTokens.every((token) => conceptTokenSet.has(token));
+}
+
 function isQuestionCorrect(question: StructuredQuizQuestion, input: string): boolean {
   if (!input.trim()) return false;
   if (question.kind === "mcq") {
     return normalizeAnswer(input) === normalizeAnswer(question.correctAnswer);
   }
-  const pool = [question.correctAnswer, ...(question.acceptedAnswers ?? [])];
-  return pool.some((candidate) => fuzzyMatch(input, candidate));
+  const pool = buildAnswerPool(question);
+  return (
+    pool.some((candidate) => fuzzyMatch(input, candidate)) ||
+    conceptPoolMatch(input, pool)
+  );
 }
 
 export function QuizRunner({
@@ -275,20 +368,105 @@ export function QuizRunner({
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [showResults, setShowResults] = useState(false);
   const current = quiz.questions[index];
-  const score = useMemo(
+  const questionResults = useMemo(
     () =>
-      quiz.questions.reduce((sum, q) => {
-        if (!checked[q.id]) return sum;
-        return sum + (isQuestionCorrect(q, answers[q.id] ?? "") ? 1 : 0);
-      }, 0),
+      quiz.questions.map((question) => {
+        const answer = answers[question.id] ?? "";
+        const wasChecked = Boolean(checked[question.id]);
+        return {
+          question,
+          answer,
+          wasChecked,
+          correct: wasChecked && isQuestionCorrect(question, answer),
+        };
+      }),
     [answers, checked, quiz.questions],
   );
+  const score = useMemo(
+    () => questionResults.reduce((sum, result) => sum + (result.correct ? 1 : 0), 0),
+    [questionResults],
+  );
+  const total = quiz.questions.length;
+  const percent = total > 0 ? Math.round((score / total) * 100) : 0;
 
   if (!current) return null;
   const chosen = answers[current.id] ?? "";
   const hasChecked = Boolean(checked[current.id]);
   const correct = hasChecked && isQuestionCorrect(current, chosen);
+  const isLastQuestion = index >= quiz.questions.length - 1;
+
+  if (showResults) {
+    return (
+      <div className="stack" style={{ gap: "var(--space-3)" }}>
+        <div className="card stack" style={{ padding: compact ? "var(--space-3)" : undefined }}>
+          <span className="muted">Quiz complete</span>
+          <strong style={{ fontSize: "1.35rem" }}>
+            Score {score} / {total} ({percent}%)
+          </strong>
+          <p style={{ margin: 0 }}>
+            {percent >= 80
+              ? "Great work. You understood most of this quiz."
+              : percent >= 60
+                ? "Good progress. Review the missed questions below."
+                : "Keep practicing. The review below shows what to focus on next."}
+          </p>
+        </div>
+
+        <div className="stack" style={{ gap: "var(--space-2)" }}>
+          {questionResults.map((result, resultIndex) => (
+            <div
+              key={result.question.id}
+              className={result.correct ? "info-banner" : "error-banner"}
+              role="group"
+              aria-label={`Question ${resultIndex + 1} review`}
+            >
+              <strong>
+                {resultIndex + 1}. {result.question.prompt}
+              </strong>
+              <p style={{ margin: "var(--space-1) 0 0" }}>
+                Your answer: {result.answer.trim() || "No answer"}
+              </p>
+              <p style={{ margin: "var(--space-1) 0 0" }}>
+                Correct answer: <strong>{result.question.correctAnswer}</strong>
+              </p>
+              {result.question.explanation && (
+                <p style={{ margin: "var(--space-1) 0 0" }}>
+                  {result.question.explanation}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => {
+              setShowResults(false);
+              setIndex(0);
+            }}
+          >
+            Review questions
+          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={() => {
+              setAnswers({});
+              setChecked({});
+              setIndex(0);
+              setShowResults(false);
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="stack" style={{ gap: "var(--space-2)" }}>
@@ -356,11 +534,17 @@ export function QuizRunner({
         </button>
         <button
           type="button"
-          className="button secondary"
-          onClick={() => setIndex((i) => Math.min(quiz.questions.length - 1, i + 1))}
-          disabled={index >= quiz.questions.length - 1}
+          className={isLastQuestion ? "button" : "button secondary"}
+          onClick={() => {
+            if (isLastQuestion) {
+              setShowResults(true);
+              return;
+            }
+            setIndex((i) => Math.min(quiz.questions.length - 1, i + 1));
+          }}
+          disabled={!hasChecked}
         >
-          Next
+          {isLastQuestion ? "View results" : "Next"}
         </button>
       </div>
     </div>
