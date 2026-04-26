@@ -1,5 +1,6 @@
 import type { Timestamp } from "firebase/firestore";
 import type { StudyMode } from "./profile";
+import type { StructuredArtifact, StructuredArtifactType } from "./studyArtifacts";
 
 export interface Citation {
   chunkId: string;
@@ -14,5 +15,7 @@ export interface ChatMessage {
   retrievedChunkIds: string[];
   citations: Citation[];
   mode: StudyMode;
+  artifactType?: StructuredArtifactType;
+  artifact?: StructuredArtifact;
   timestamp?: Timestamp;
 }

@@ -16,11 +16,12 @@ const MODE_INSTRUCTIONS: Record<StudyMode, string> = {
     "Produce a clear summary with the key ideas and important terms first, then a short overview. Use short bullet points.",
   simplify:
     "Rewrite the requested content in plain, simple language. Use shorter sentences and define hard terms.",
-  quiz: "Create study questions from the document. Mix multiple-choice and short answer. Provide answer keys after each question.",
+  quiz:
+    'Return only a JSON array of questions like [{"kind":"mcq","prompt":"...","options":["A","B","C","D"],"correctAnswer":"A","explanation":"..."},{"kind":"written","prompt":"...","correctAnswer":"...","acceptedAnswers":["..."],"explanation":"..."}]. Mix multiple-choice and written questions. Create 5-10 questions total.',
   flashcards:
-    "Create study flashcards as a JSON array like [{\"front\":\"...\",\"back\":\"...\"}]. Output only the JSON array.",
+    "Create study flashcards as a JSON array like [{\"front\":\"...\",\"back\":\"...\"}]. Create 6-12 cards with concise fronts and clear backs. Output only the JSON array.",
   steps:
-    "Break the requested task into a short, ordered list of concrete steps. One action per step.",
+    'Return only a JSON array of concise task steps like [{"title":"Task 1","instruction":"..."},{"title":"Task 2","instruction":"..."}]. Separate distinct assignments first, then list one concrete action per step.',
 };
 
 export function buildSystemPrompt(ctx: PromptContext): string {
