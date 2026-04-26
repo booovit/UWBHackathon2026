@@ -11,11 +11,12 @@ export interface PromptContext {
 }
 
 const MODE_INSTRUCTIONS: Record<StudyMode, string> = {
-  chat: "Answer the user's question directly using only the document excerpts.",
+  chat:
+    "Answer the user's question directly using only the document excerpts. For longer answers, use short section labels and concise bullets. Do not use markdown heading symbols or decorative asterisks.",
   summary:
-    "Produce a clear summary with the key ideas and important terms first, then a short overview. Use short bullet points.",
+    "Produce a clear summary with the key ideas and important terms first, then a short overview. Use short section labels and concise bullets. Do not use markdown heading symbols or decorative asterisks.",
   simplify:
-    "Rewrite the requested content in plain, simple language. Use shorter sentences and define hard terms.",
+    "Rewrite the requested content in plain, simple language. Use shorter sentences, define hard terms, and use short section labels when helpful. Do not use markdown heading symbols or decorative asterisks.",
   quiz:
     'Return only a JSON array of questions like [{"kind":"mcq","prompt":"...","options":["A","B","C","D"],"correctAnswer":"A","explanation":"..."},{"kind":"written","prompt":"...","correctAnswer":"...","acceptedAnswers":["..."],"explanation":"..."}]. Mix multiple-choice and written questions. Create 5-10 questions total.',
   flashcards:

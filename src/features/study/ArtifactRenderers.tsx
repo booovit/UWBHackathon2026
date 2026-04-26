@@ -7,6 +7,121 @@ import type {
   StructuredQuizQuestion,
 } from "@/types/studyArtifacts";
 
+type TextBlock =
+  | { kind: "heading"; text: string }
+  | { kind: "paragraph"; text: string }
+  | { kind: "list"; ordered: boolean; items: string[] };
+
+function cleanInlineText(value: string): string {
+  return value
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")
+    .replace(/(^|[\s([{])([*_])([^*_]+)\2(?=$|[\s,.;:!?)}\]])/g, "$1$3")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseTextResponse(content: string): TextBlock[] {
+  const lines = content
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !/^[-*_]{3,}$/.test(line));
+
+  const blocks: TextBlock[] = [];
+  let pendingList: { ordered: boolean; items: string[] } | null = null;
+  let pendingParagraph: string[] = [];
+
+  function flushParagraph() {
+    if (pendingParagraph.length === 0) return;
+    blocks.push({
+      kind: "paragraph",
+      text: cleanInlineText(pendingParagraph.join(" ")),
+    });
+    pendingParagraph = [];
+  }
+
+  function flushList() {
+    if (!pendingList) return;
+    blocks.push({
+      kind: "list",
+      ordered: pendingList.ordered,
+      items: pendingList.items,
+    });
+    pendingList = null;
+  }
+
+  for (const rawLine of lines) {
+    const markdownHeading = rawLine.match(/^#{1,6}\s+(.+)$/);
+    const boldHeading = rawLine.match(/^(\*\*|__)([^*_]+)\1:?$/);
+    const plainHeading = rawLine.match(/^([A-Z][A-Za-z0-9 /&-]{2,42}):$/);
+    const heading = markdownHeading?.[1] ?? boldHeading?.[2] ?? plainHeading?.[1];
+
+    if (heading) {
+      flushParagraph();
+      flushList();
+      blocks.push({ kind: "heading", text: cleanInlineText(heading) });
+      continue;
+    }
+
+    const listItem = rawLine.match(/^((?:[-*•])|\d+[.)])\s+(.+)$/);
+    if (listItem) {
+      flushParagraph();
+      const ordered = /^\d/.test(listItem[1]);
+      const item = cleanInlineText(listItem[2]);
+      if (!pendingList || pendingList.ordered !== ordered) {
+        flushList();
+        pendingList = { ordered, items: [] };
+      }
+      pendingList.items.push(item);
+      continue;
+    }
+
+    flushList();
+    pendingParagraph.push(rawLine);
+  }
+
+  flushParagraph();
+  flushList();
+  return blocks.filter((block) =>
+    block.kind === "list" ? block.items.length > 0 : block.text.length > 0,
+  );
+}
+
+export function TextResponseRenderer({ content }: { content: string }) {
+  const blocks = parseTextResponse(content);
+
+  if (blocks.length === 0) {
+    return <span className="message-content">{cleanInlineText(content)}</span>;
+  }
+
+  return (
+    <div className="study-response message-content">
+      {blocks.map((block, index) => {
+        if (block.kind === "heading") {
+          return (
+            <h3 key={`${block.kind}-${index}`} className="study-response-heading">
+              {block.text}
+            </h3>
+          );
+        }
+        if (block.kind === "list") {
+          const ListTag = block.ordered ? "ol" : "ul";
+          return (
+            <ListTag key={`${block.kind}-${index}`} className="study-response-list">
+              {block.items.map((item, itemIndex) => (
+                <li key={`${item}-${itemIndex}`}>{item}</li>
+              ))}
+            </ListTag>
+          );
+        }
+        return <p key={`${block.kind}-${index}`}>{block.text}</p>;
+      })}
+    </div>
+  );
+}
+
 export function FlashcardDeckViewer({
   cards,
   compact,
