@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import { useApplyAccessibility } from "@/features/profile/applyAccessibility";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
@@ -151,6 +151,12 @@ function ProfileIcon() {
   );
 }
 
+function headerNavTabClassName({ isActive }: { isActive: boolean }) {
+  return ["button", "ghost", "header-nav-tab", isActive ? "header-nav-tab-active" : ""]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function Header() {
   const { user, isGuest, signOutUser } = useAuth();
   const isSignedIn = Boolean(user) && !isGuest;
@@ -164,16 +170,16 @@ function Header() {
       <nav className="header-nav row" aria-label="Primary">
         <ThemeToggle />
         <BigFontToggle />
-        <Link to="/study" className="button ghost">
+        <NavLink to="/study" className={headerNavTabClassName}>
           Study
-        </Link>
-        <Link to="/dashboard" className="button ghost">
+        </NavLink>
+        <NavLink to="/dashboard" end className={headerNavTabClassName}>
           Library
-        </Link>
+        </NavLink>
         {isSignedIn && (
-          <Link to="/profile" className="button ghost" aria-label="Profile">
+          <NavLink to="/profile" className={headerNavTabClassName} aria-label="Profile">
             <ProfileIcon />
-          </Link>
+          </NavLink>
         )}
         {isSignedIn ? (
           <>

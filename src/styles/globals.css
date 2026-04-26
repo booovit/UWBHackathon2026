@@ -495,6 +495,16 @@ legend {
   background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
 }
 
+.header-nav .header-nav-tab.header-nav-tab-active {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+[data-contrast="high"] .header-nav .header-nav-tab.header-nav-tab-active {
+  box-shadow: 0 0 0 3px var(--color-text);
+}
+
 .app-main {
   flex: 1;
   width: 100%;
