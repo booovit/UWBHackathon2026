@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import type { SupportFlags, UiPreferences, StudyPreferences } from "@/types/profile";
@@ -91,8 +91,13 @@ export function ProfileSetupPage() {
   const [supports, setSupports] = useState<SupportFlags>(profile.supports);
   const [studyPrefs, setStudyPrefs] = useState<StudyPreferences>(profile.studyPreferences);
   const [uiPrefs, setUiPrefs] = useState<UiPreferences>(profile.uiPreferences);
+  const [displayName, setDisplayName] = useState(profile.displayName);
   const [customNotes, setCustomNotes] = useState(profile.customNotes || "");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(profile.displayName);
+  }, [profile.displayName]);
 
   function toggleSupport(key: keyof SupportFlags) {
     setSupports((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -116,6 +121,7 @@ export function ProfileSetupPage() {
 
     try {
       await saveProfile({
+        displayName,
         supports,
         studyPreferences: studyPrefs,
         uiPreferences: uiPrefs,
@@ -142,6 +148,23 @@ export function ProfileSetupPage() {
         </header>
 
         <form onSubmit={handleSubmit} className="profile-setup-form">
+          <section className="profile-section">
+            <h2>Account Details</h2>
+            <p className="muted">Choose the name you want shown on your profile.</p>
+
+            <div>
+              <label htmlFor="setup-display-name">Name</label>
+              <input
+                id="setup-display-name"
+                type="text"
+                autoComplete="name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+          </section>
+
           <section className="profile-section">
             <h2>What kind of support do you need?</h2>
             <p className="muted">Select all that apply</p>

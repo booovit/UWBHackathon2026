@@ -45,7 +45,10 @@ export function ProfilePage() {
         </h2>
         <div className="grid-2">
           <ProfileFact label="Email" value={user?.email ?? "Guest session"} />
-          <ProfileFact label="Name" value={user?.displayName ?? "Not provided"} />
+          <ProfileFact
+            label="Name"
+            value={profile.displayName || user?.displayName || "Not provided"}
+          />
         </div>
       </section>
 

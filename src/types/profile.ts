@@ -44,6 +44,7 @@ export interface FeedbackSignals {
 }
 
 export interface UserProfile {
+  displayName: string;
   supports: SupportFlags;
   uiPreferences: UiPreferences;
   studyPreferences: StudyPreferences;
@@ -54,6 +55,7 @@ export interface UserProfile {
 }
 
 export const defaultProfile: UserProfile = {
+  displayName: "",
   supports: { dyslexia: false, adhd: false, lowVision: false },
   uiPreferences: {
     fontScale: 1,

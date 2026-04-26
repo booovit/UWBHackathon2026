@@ -8,7 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
-import { db, firebaseConfigured } from "@/lib/firebase";
+import { updateProfile } from "firebase/auth";
+import { auth, db, firebaseConfigured } from "@/lib/firebase";
 import { defaultProfile, type UserProfile } from "@/types/profile";
 import { useAuth } from "@/features/auth/AuthProvider";
 
@@ -42,9 +43,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       ref,
       (snap) => {
         if (snap.exists()) {
-          setProfile({ ...defaultProfile, ...(snap.data() as UserProfile) });
+          setProfile({
+            ...defaultProfile,
+            displayName: user.displayName ?? "",
+            ...(snap.data() as UserProfile),
+          });
         } else {
-          setProfile(defaultProfile);
+          setProfile({ ...defaultProfile, displayName: user.displayName ?? "" });
         }
         setLoading(false);
       },
@@ -74,15 +79,35 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           ...(next.feedbackSignals ?? {}),
         },
       };
+      mergedLocal.displayName = mergedLocal.displayName.trim();
       if (useLocalProfileOnly) {
         setProfile(mergedLocal);
         return;
       }
-      await setDoc(
-        doc(db, "users", user.uid, "profile", "main"),
-        { ...mergedLocal, updatedAt: serverTimestamp() },
-        { merge: true },
-      );
+
+      const nextDisplayName = mergedLocal.displayName || null;
+      const writes = [
+        setDoc(
+          doc(db, "users", user.uid, "profile", "main"),
+          { ...mergedLocal, updatedAt: serverTimestamp() },
+          { merge: true },
+        ),
+        setDoc(
+          doc(db, "users", user.uid),
+          {
+            displayName: mergedLocal.displayName,
+            email: user.email ?? "",
+            lastLoginAt: serverTimestamp(),
+          },
+          { merge: true },
+        ),
+      ];
+
+      if (auth.currentUser && auth.currentUser.displayName !== nextDisplayName) {
+        writes.push(updateProfile(auth.currentUser, { displayName: nextDisplayName }));
+      }
+
+      await Promise.all(writes);
     },
     [user, profile, useLocalProfileOnly],
   );

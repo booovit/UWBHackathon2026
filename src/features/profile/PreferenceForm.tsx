@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type {
   ResponseLength,
   UserProfile,
@@ -14,6 +14,10 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
   const [profile, setProfile] = useState<UserProfile>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setProfile(initial);
+  }, [initial]);
 
   function update<T extends keyof UserProfile>(key: T, value: UserProfile[T]) {
     setProfile((prev) => ({ ...prev, [key]: value }));
@@ -34,6 +38,21 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
 
   return (
     <form className="stack" onSubmit={(e) => void handleSubmit(e)}>
+      <fieldset className="card stack">
+        <legend>Account details</legend>
+        <div>
+          <label htmlFor="profile-display-name">Name</label>
+          <input
+            id="profile-display-name"
+            type="text"
+            autoComplete="name"
+            value={profile.displayName}
+            onChange={(e) => update("displayName", e.target.value)}
+            placeholder="Your name"
+          />
+        </div>
+      </fieldset>
+
       <fieldset className="card stack">
         <legend>Support areas</legend>
         <p className="muted">
