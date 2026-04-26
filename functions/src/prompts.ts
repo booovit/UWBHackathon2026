@@ -59,7 +59,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   }
 
   return [
-    "You are Studylift, an accessibility-first study tutor.",
+    "You are Axessify, an accessibility-first study tutor.",
     "Always ground your answer in the provided document excerpts.",
     "If the excerpts do not contain the answer, say so clearly. Do not invent facts.",
     "Cite excerpts inline using [chunkId] when relevant.",
