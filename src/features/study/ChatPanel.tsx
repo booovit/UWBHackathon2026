@@ -16,43 +16,11 @@ import { callChatWithDocument } from "@/lib/functions";
 import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
 import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
 import { useProfile } from "@/features/profile/ProfileProvider";
+import { STUDY_MODES, StudyModeSelector } from "@/features/study/StudyModeSelector";
 import { ArtifactMessageRenderer } from "@/features/study/ArtifactRenderers";
 import type { ChatMessage } from "@/types/chat";
 import type { StudyMode } from "@/types/profile";
 import type { FlashcardsArtifact, QuizArtifact } from "@/types/studyArtifacts";
-
-const MODES: { value: StudyMode; label: string; placeholder: string }[] = [
-  {
-    value: "chat",
-    label: "Chat",
-    placeholder: "Ask a question about this document…",
-  },
-  {
-    value: "summary",
-    label: "Summary",
-    placeholder: "Summarize this document, or a section.",
-  },
-  {
-    value: "simplify",
-    label: "Simplify",
-    placeholder: "Paste or describe what you want simplified.",
-  },
-  {
-    value: "quiz",
-    label: "Quiz",
-    placeholder: "Make a quiz from section 3 (or the whole document).",
-  },
-  {
-    value: "flashcards",
-    label: "Flashcards",
-    placeholder: "Create flashcards from the key terms.",
-  },
-  {
-    value: "steps",
-    label: "Step-by-step",
-    placeholder: "Break this assignment into steps.",
-  },
-];
 
 interface Props {
   docId: string;
@@ -127,7 +95,7 @@ export function ChatPanel({ docId, documentTitle }: Props) {
   }, [messages]);
 
   const placeholder = useMemo(
-    () => MODES.find((m) => m.value === mode)?.placeholder ?? "",
+    () => STUDY_MODES.find((m) => m.value === mode)?.placeholder ?? "",
     [mode],
   );
 
@@ -193,26 +161,18 @@ export function ChatPanel({ docId, documentTitle }: Props) {
 
   return (
     <div className="card stack" aria-label="Study chat">
-      <div className="row" role="tablist" aria-label="Study mode">
-        {MODES.map((m) => (
-          <button
-            key={m.value}
-            type="button"
-            role="tab"
-            aria-selected={mode === m.value}
-            className={mode === m.value ? "button" : "button secondary"}
-            onClick={() => {
-              if (mode === m.value) return;
-              setMode(m.value);
-              setInput("");
-              setError(null);
-              setListenerError(null);
-              setSaveHint(null);
-            }}
-          >
-            {m.label}
-          </button>
-        ))}
+      <div className="row" style={{ alignItems: "flex-start" }}>
+        <StudyModeSelector
+          mode={mode}
+          onModeChange={(nextMode) => {
+            if (mode === nextMode) return;
+            setMode(nextMode);
+            setInput("");
+            setError(null);
+            setListenerError(null);
+            setSaveHint(null);
+          }}
+        />
         {activeChatId && (
           <button
             type="button"
@@ -259,7 +219,7 @@ export function ChatPanel({ docId, documentTitle }: Props) {
                   Interactive {m.artifactType} generated.
                 </span>
               ) : (
-                <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
+                <span className="message-content">{m.content}</span>
               )}
               {m.role === "assistant" && (
                 <ArtifactMessageRenderer

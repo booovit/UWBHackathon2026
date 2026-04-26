@@ -28,10 +28,13 @@ export const callChatWithDocument = httpsCallable<ChatRequest, ChatResponse>(
 
 export interface QuickChatRequest {
   message: string;
+  mode?: StudyMode;
 }
 
 export interface QuickChatResponse {
   content: string;
+  artifactType?: StructuredArtifactType;
+  artifact?: StructuredArtifact;
 }
 
 export const callQuickChat = httpsCallable<QuickChatRequest, QuickChatResponse>(
