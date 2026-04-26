@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import { useApplyAccessibility } from "@/features/profile/applyAccessibility";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
@@ -12,34 +12,6 @@ import { ProfilePage } from "@/routes/ProfilePage";
 import { ProfileSetupPage } from "@/routes/ProfileSetupPage";
 import { StudyPage } from "@/routes/StudyPage";
 import { ThemeToggle } from "@/features/theme/ThemeProvider";
-
-const LARGE_PRINT_SCALE = 2.4;
-
-function BigFontToggle() {
-  const { profile, saveProfile } = useProfile();
-  const isActive = profile.uiPreferences.fontScale >= LARGE_PRINT_SCALE;
-
-  function toggle() {
-    void saveProfile({
-      uiPreferences: {
-        ...profile.uiPreferences,
-        fontScale: isActive ? 1.0 : LARGE_PRINT_SCALE,
-      },
-    });
-  }
-
-  return (
-    <button
-      type="button"
-      className={isActive ? "big-font-toggle active" : "big-font-toggle"}
-      aria-pressed={isActive}
-      onClick={toggle}
-      aria-label={isActive ? "Turn off big font" : "Turn on big font for visual impairment"}
-    >
-      {isActive ? "Big Font ON" : "Big Font"}
-    </button>
-  );
-}
 
 export function App() {
   const { profile } = useProfile();
@@ -151,6 +123,12 @@ function ProfileIcon() {
   );
 }
 
+function headerNavTabClassName({ isActive }: { isActive: boolean }) {
+  return ["button", "ghost", "header-nav-tab", isActive ? "header-nav-tab-active" : ""]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function Header() {
   const { user, isGuest, signOutUser } = useAuth();
   const isSignedIn = Boolean(user) && !isGuest;
@@ -163,17 +141,16 @@ function Header() {
       </Link>
       <nav className="header-nav row" aria-label="Primary">
         <ThemeToggle />
-        <BigFontToggle />
-        <Link to="/study" className="button ghost">
+        <NavLink to="/study" className={headerNavTabClassName}>
           Study
-        </Link>
-        <Link to="/dashboard" className="button ghost">
+        </NavLink>
+        <NavLink to="/dashboard" end className={headerNavTabClassName}>
           Library
-        </Link>
+        </NavLink>
         {isSignedIn && (
-          <Link to="/profile" className="button ghost" aria-label="Profile">
+          <NavLink to="/profile" className={headerNavTabClassName} aria-label="Profile">
             <ProfileIcon />
-          </Link>
+          </NavLink>
         )}
         {isSignedIn ? (
           <>

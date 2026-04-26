@@ -1,6 +1,7 @@
 import { useProfile } from "@/features/profile/ProfileProvider";
 
 const MAX_SCALE = 3.0;
+const LARGE_PRINT_SCALE = 2.4;
 
 export function AccessibilityToolbar() {
   const { profile, saveProfile } = useProfile();
@@ -42,7 +43,18 @@ export function AccessibilityToolbar() {
           A+
         </button>
       </div>
-      <div className="row" style={{ gap: "var(--space-2)" }}>
+      <div
+        className="row accessibility-toggles"
+        style={{ gap: "var(--space-2)" }}
+      >
+        <ToolbarToggle
+          pressed={ui.fontScale >= LARGE_PRINT_SCALE}
+          label="Big font"
+          className="accessibility-big-font-btn"
+          onChange={(v) =>
+            setUi({ fontScale: v ? LARGE_PRINT_SCALE : 1.0 })
+          }
+        />
         <ToolbarToggle
           pressed={ui.dyslexiaFont}
           label="Dyslexic"

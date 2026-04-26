@@ -18,9 +18,11 @@
   --color-warning: #f6b06b;
   --color-danger: #ff7a7a;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  /* Match theme / segmented controls (Dark · Light · High contrast) */
+  --radius-pill: 999px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -151,31 +153,34 @@
   box-sizing: border-box;
 }
 
-html,
-body,
-#root {
+/* min-height (not height) on body / #root so the page can grow; background gradient
+   then spans the full length of a long scroll, lighter at the top, darker at the foot. */
+html {
   height: 100%;
+  font-size: calc(var(--font-base) * var(--font-scale));
 }
 
-html {
-  font-size: calc(var(--font-base) * var(--font-scale));
+body,
+#root {
+  min-height: 100%;
+  min-height: 100dvh;
 }
 
 body {
   margin: 0;
   font-family: var(--font-readable);
-  background:
-    radial-gradient(
-      900px 450px at 100% 0%,
-      rgba(138, 166, 255, 0.08),
-      transparent 70%
-    ),
-    radial-gradient(
-      700px 400px at 0% 100%,
-      rgba(181, 152, 255, 0.07),
-      transparent 70%
-    ),
-    var(--color-bg);
+  /* Lighter at top, darker at bottom: soft multi-stop transition over the full page */
+  background: linear-gradient(
+    180deg,
+    #171d2b 0%,
+    #131a28 10%,
+    #10141f 25%,
+    #0c1019 40%,
+    #0a0d14 55%,
+    var(--color-bg) 70%,
+    #070a10 85%,
+    #03050a 100%
+  );
   color: var(--color-text);
   line-height: var(--line-height);
   letter-spacing: var(--letter-spacing);
@@ -194,19 +199,45 @@ body {
   font-family: var(--font-dyslexia);
 }
 
+/* Taller, dominant control on the study accessibility bar */
+.accessibility-toggles {
+  flex: 1 1 280px;
+  align-items: stretch;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.accessibility-toggles .accessibility-big-font-btn {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: clamp(1.8rem, 2.1rem, 2.4rem);
+  font-weight: 800;
+  line-height: 1.15;
+  padding: 0.2rem .6rem;
+  min-height: 3.15rem;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Keep “BIG FONT” in the UI sans for emphasis even in dyslexia mode for this control */
+[data-dyslexia-font="true"] .accessibility-toggles .accessibility-big-font-btn {
+  font-family: var(--font-readable);
+}
+
 [data-theme="light"] body {
-  background:
-    radial-gradient(
-      900px 450px at 100% 0%,
-      rgba(47, 77, 255, 0.06),
-      transparent 70%
-    ),
-    radial-gradient(
-      700px 400px at 0% 100%,
-      rgba(108, 77, 255, 0.05),
-      transparent 70%
-    ),
-    var(--color-bg);
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #fafbfe 15%,
+    #f0f2f7 32%,
+    #e3e7f0 50%,
+    #d4dae6 66%,
+    #c3cbd8 83%,
+    #b2bcc9 100%
+  );
 }
 
 [data-contrast="high"] body {
@@ -317,16 +348,22 @@ legend {
 .button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   background: var(--color-primary);
   color: var(--color-primary-contrast);
-  padding: var(--space-3) var(--space-5);
+  padding: 0.5rem 1.15rem;
+  min-height: 2.4rem;
+  box-sizing: border-box;
   border: 1px solid var(--color-primary);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
   font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
+  cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease,
-    transform 80ms ease;
+    box-shadow 120ms ease, transform 80ms ease;
 }
 
 .button:hover {
@@ -352,7 +389,8 @@ legend {
   background: transparent;
   color: var(--color-text);
   border: 1px solid transparent;
-  padding: var(--space-2) var(--space-3);
+  padding: 0.35rem 0.9rem;
+  min-height: 2.1rem;
 }
 
 .button.ghost:hover {
@@ -363,6 +401,11 @@ legend {
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
+}
+
+.button:focus-visible {
+  border-radius: var(--radius-pill);
+  outline-offset: 3px;
 }
 
 .card {
@@ -493,6 +536,16 @@ legend {
   height: 10px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+}
+
+.header-nav .header-nav-tab.header-nav-tab-active {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+[data-contrast="high"] .header-nav .header-nav-tab.header-nav-tab-active {
+  box-shadow: 0 0 0 3px var(--color-text);
 }
 
 .app-main {
@@ -697,8 +750,13 @@ legend {
   background: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
 }
 
 .chat-thread .empty .prompt-suggestions button:hover {
@@ -825,54 +883,13 @@ legend {
   margin-right: var(--space-2);
 }
 
-/* Large print mode — visual impairment */
-/* Big Font toggle — always large so visually impaired users can find it */
-.big-font-toggle {
-  font-size: 2.8rem;
-  font-weight: 900;
-  padding: 6px 16px;
-  border: 3px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-alt);
-  color: var(--color-text);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
-  white-space: nowrap;
-  line-height: 1;
-}
-
-.big-font-toggle:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-primary);
-}
-
-.big-font-toggle.active,
-.big-font-toggle[aria-pressed="true"] {
-  background: #7c3aed;
-  border-color: #7c3aed;
-  color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.4);
-}
-
-.big-font-toggle.active:hover,
-.big-font-toggle[aria-pressed="true"]:hover {
-  background: #6d28d9;
-  border-color: #6d28d9;
-}
-
-[data-contrast="high"] .big-font-toggle[aria-pressed="true"] {
-  background: #ffe600;
-  border-color: #ffe600;
-  color: #000000;
-  box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.5);
-}
+/* Large print mode — header / theme controls (compact) */
 
 .theme-toggle {
   display: inline-flex;
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 2px;
   gap: 2px;
 }
@@ -882,7 +899,7 @@ legend {
   border: none;
   background: transparent;
   color: var(--color-text-muted);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -914,7 +931,6 @@ legend {
 [data-large-print="true"] .app-header .button,
 [data-large-print="true"] .app-header .badge,
 [data-large-print="true"] .app-header .muted,
-[data-large-print="true"] .big-font-toggle,
 [data-large-print="true"] .theme-toggle button {
   font-size: 0.62rem;
   line-height: 1.2;
@@ -922,7 +938,6 @@ legend {
 
 [data-large-print="true"] .app-header .button,
 [data-large-print="true"] .app-header .badge,
-[data-large-print="true"] .big-font-toggle,
 [data-large-print="true"] .theme-toggle button {
   min-height: 42px;
   padding: var(--space-2) var(--space-3);
@@ -966,8 +981,7 @@ legend {
   }
 
   [data-large-print="true"] .app-header .button,
-  [data-large-print="true"] .app-header .badge,
-  [data-large-print="true"] .big-font-toggle {
+  [data-large-print="true"] .app-header .badge {
     justify-content: center;
   }
 }
