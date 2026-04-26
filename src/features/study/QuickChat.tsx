@@ -15,11 +15,18 @@ import type { Timestamp } from "firebase/firestore";
 import { db, firebaseConfigured } from "@/lib/firebase";
 import { callQuickChat } from "@/lib/functions";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useProfile } from "@/features/profile/ProfileProvider";
+import { STUDY_MODES } from "@/features/study/StudyModeSelector";
+import { ArtifactMessageRenderer } from "@/features/study/ArtifactRenderers";
+import type { StructuredArtifact, StructuredArtifactType } from "@/types/studyArtifacts";
 
 interface QuickMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  mode?: string;
+  artifactType?: StructuredArtifactType;
+  artifact?: StructuredArtifact;
   timestamp?: Timestamp;
 }
 
@@ -42,6 +49,8 @@ const SUGGESTIONS = [
 
 export function QuickChat({ embedded }: { embedded?: boolean }) {
   const { user, loading: authLoading } = useAuth();
+  const { profile } = useProfile();
+  const mode = profile.studyPreferences.defaultStudyMode;
   const [messages, setMessages] = useState<QuickMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -123,7 +132,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      await callQuickChat({ message: trimmed });
+      await callQuickChat({ message: trimmed, mode });
       setInput("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
@@ -177,8 +186,22 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
             <div key={m.id} className={`message ${m.role}`}>
               <span className="muted" style={{ fontSize: "0.78rem" }}>
                 {m.role === "user" ? "You" : "Tutor"}
+                {m.mode ? ` · ${m.mode}` : ""}
               </span>
-              <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
+              {m.role === "assistant" && m.artifactType ? (
+                <span className="muted" style={{ fontSize: "0.88em" }}>
+                  Interactive {m.artifactType} generated.
+                </span>
+              ) : (
+                <span className="message-content">{m.content}</span>
+              )}
+              {m.role === "assistant" && (
+                <ArtifactMessageRenderer
+                  artifactType={m.artifactType}
+                  artifact={m.artifact}
+                  compact
+                />
+              )}
             </div>
           ))
         )}
@@ -187,7 +210,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
             <span className="muted" style={{ fontSize: "0.78rem" }}>
               Tutor
             </span>
-            <span>Thinking…</span>
+            <span className="message-content">Thinking…</span>
           </div>
         )}
       </div>
@@ -215,7 +238,8 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
           onChange={(e) => setInput(e.target.value)}
           placeholder={
             firebaseConfigured
-              ? "Ask the tutor anything…"
+              ? (STUDY_MODES.find((m) => m.value === mode)?.placeholder ??
+                "Ask the tutor anything…")
               : "Demo mode — type anything to see the chat layout."
           }
           rows={2}

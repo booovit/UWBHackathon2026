@@ -69,11 +69,6 @@ export function AccessibilityToolbar() {
           onChange={(v) => setUi({ lineFocus: v })}
         />
         <ToolbarToggle
-          pressed={ui.highContrast}
-          label="High contrast"
-          onChange={(v) => setUi({ highContrast: v })}
-        />
-        <ToolbarToggle
           pressed={ui.maxLineWidth === "narrow"}
           label="Narrow lines"
           onChange={(v) => setUi({ maxLineWidth: v ? "narrow" : "standard" })}
