@@ -17,7 +17,10 @@ import { callQuickChat } from "@/lib/functions";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import { STUDY_MODES } from "@/features/study/StudyModeSelector";
-import { ArtifactMessageRenderer } from "@/features/study/ArtifactRenderers";
+import {
+  ArtifactMessageRenderer,
+  TextResponseRenderer,
+} from "@/features/study/ArtifactRenderers";
 import type { StructuredArtifact, StructuredArtifactType } from "@/types/studyArtifacts";
 
 interface QuickMessage {
@@ -192,6 +195,8 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
                 <span className="muted" style={{ fontSize: "0.88em" }}>
                   Interactive {m.artifactType} generated.
                 </span>
+              ) : m.role === "assistant" ? (
+                <TextResponseRenderer content={m.content} />
               ) : (
                 <span className="message-content">{m.content}</span>
               )}

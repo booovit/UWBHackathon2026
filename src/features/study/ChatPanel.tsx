@@ -17,7 +17,10 @@ import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
 import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import { STUDY_MODES, StudyModeSelector } from "@/features/study/StudyModeSelector";
-import { ArtifactMessageRenderer } from "@/features/study/ArtifactRenderers";
+import {
+  ArtifactMessageRenderer,
+  TextResponseRenderer,
+} from "@/features/study/ArtifactRenderers";
 import type { ChatMessage } from "@/types/chat";
 import type { StudyMode } from "@/types/profile";
 import type { FlashcardsArtifact, QuizArtifact } from "@/types/studyArtifacts";
@@ -218,6 +221,8 @@ export function ChatPanel({ docId, documentTitle }: Props) {
                 <span className="muted" style={{ fontSize: "0.88em" }}>
                   Interactive {m.artifactType} generated.
                 </span>
+              ) : m.role === "assistant" ? (
+                <TextResponseRenderer content={m.content} />
               ) : (
                 <span className="message-content">{m.content}</span>
               )}

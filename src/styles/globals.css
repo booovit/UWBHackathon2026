@@ -565,6 +565,42 @@ legend {
   white-space: pre-wrap;
 }
 
+.study-response {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  white-space: normal;
+}
+
+.study-response p,
+.study-response-heading,
+.study-response-list {
+  margin: 0;
+}
+
+.study-response-heading {
+  color: var(--color-text);
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 800;
+  padding-top: var(--space-1);
+}
+
+.study-response-heading:first-child {
+  padding-top: 0;
+}
+
+.study-response-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: 1.35rem;
+}
+
+.study-response-list li {
+  padding-left: var(--space-1);
+}
+
 .message.user {
   background: var(--color-primary);
   color: var(--color-primary-contrast);
