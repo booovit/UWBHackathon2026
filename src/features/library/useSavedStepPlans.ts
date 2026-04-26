@@ -12,31 +12,31 @@ import {
 import { db, firebaseConfigured } from "@/lib/firebase";
 import { useAuth } from "@/features/auth/AuthProvider";
 import {
-  loadPreviewQuizzes,
+  loadPreviewStepPlans,
   randomId,
-  savePreviewQuizzes,
+  savePreviewStepPlans,
 } from "@/lib/previewLibrary";
-import type { SavedQuiz } from "@/types/library";
-import type { StructuredQuizQuestion } from "@/types/studyArtifacts";
+import type { SavedStepPlan } from "@/types/library";
+import type { StructuredStep } from "@/types/studyArtifacts";
 
-export function useSavedQuizzes() {
+export function useSavedStepPlans() {
   const { user, isDemoUser } = useAuth();
-  const [quizzes, setQuizzes] = useState<SavedQuiz[]>([]);
+  const [plans, setPlans] = useState<SavedStepPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const uid = user?.uid;
 
   const refreshPreview = useCallback(() => {
     if (!uid) {
-      setQuizzes([]);
+      setPlans([]);
       return;
     }
-    setQuizzes(loadPreviewQuizzes(uid));
+    setPlans(loadPreviewStepPlans(uid));
   }, [uid]);
 
   useEffect(() => {
     if (!uid) {
-      setQuizzes([]);
+      setPlans([]);
       setLoading(false);
       return;
     }
@@ -49,15 +49,15 @@ export function useSavedQuizzes() {
     setLoading(true);
     setError(null);
     const q = query(
-      collection(db, "users", uid, "quizzes"),
+      collection(db, "users", uid, "savedStepPlans"),
       orderBy("updatedAt", "desc"),
     );
     return onSnapshot(
       q,
       (snap) => {
-        setQuizzes(
+        setPlans(
           snap.docs.map(
-            (d) => ({ id: d.id, ...(d.data() as Omit<SavedQuiz, "id">) }),
+            (d) => ({ id: d.id, ...(d.data() as Omit<SavedStepPlan, "id">) }),
           ),
         );
         setLoading(false);
@@ -70,54 +70,52 @@ export function useSavedQuizzes() {
     );
   }, [uid, isDemoUser, refreshPreview]);
 
-  async function createQuiz(
+  async function createStepPlan(
     title: string,
+    steps: StructuredStep[],
     content: string,
     sourceDocId?: string | null,
-    questions?: StructuredQuizQuestion[],
   ) {
-    if (!uid || !title.trim()) return;
-    const hasQuestions = (questions?.length ?? 0) > 0;
+    if (!uid || !title.trim() || steps.length === 0) return;
     const storedContent =
       content.trim() ||
-      (hasQuestions ? "Structured quiz saved from study chat." : "");
-    if (!storedContent.trim() && !hasQuestions) return;
+      "Step-by-step plan saved from study chat.";
     if (!firebaseConfigured || isDemoUser) {
-      const list = loadPreviewQuizzes(uid);
-      const q: SavedQuiz = {
-        id: randomId("quiz"),
+      const list = loadPreviewStepPlans(uid);
+      const plan: SavedStepPlan = {
+        id: randomId("steps"),
         title: title.trim(),
         content: storedContent,
-        questions: questions ?? [],
+        steps,
         sourceDocId: sourceDocId ?? null,
       };
-      list.push(q);
-      savePreviewQuizzes(uid, list);
+      list.push(plan);
+      savePreviewStepPlans(uid, list);
       refreshPreview();
       return;
     }
-    await addDoc(collection(db, "users", uid, "quizzes"), {
+    await addDoc(collection(db, "users", uid, "savedStepPlans"), {
       title: title.trim(),
       content: storedContent,
-      questions: questions ?? [],
+      steps,
       sourceDocId: sourceDocId ?? null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
   }
 
-  async function removeQuiz(id: string) {
+  async function removePlan(id: string) {
     if (!uid) return;
     if (!firebaseConfigured || isDemoUser) {
-      savePreviewQuizzes(
+      savePreviewStepPlans(
         uid,
-        loadPreviewQuizzes(uid).filter((q) => q.id !== id),
+        loadPreviewStepPlans(uid).filter((p) => p.id !== id),
       );
       refreshPreview();
       return;
     }
-    await deleteDoc(doc(db, "users", uid, "quizzes", id));
+    await deleteDoc(doc(db, "users", uid, "savedStepPlans", id));
   }
 
-  return { quizzes, loading, error, createQuiz, removeQuiz };
+  return { plans, loading, error, createStepPlan, removePlan };
 }

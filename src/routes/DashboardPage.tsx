@@ -3,17 +3,19 @@ import { Link } from "react-router-dom";
 import { useDocuments } from "@/features/documents/useDocuments";
 import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
 import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
+import { useSavedStepPlans } from "@/features/library/useSavedStepPlans";
 import { useStudyFolders } from "@/features/library/useStudyFolders";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import {
   FlashcardDeckViewer,
   QuizRunner,
+  StepsViewer,
 } from "@/features/study/ArtifactRenderers";
 import { firebaseConfigured } from "@/lib/firebase";
 import type { StudyDocument } from "@/types/document";
 import type { FlashcardDeck } from "@/types/library";
-import type { SavedQuiz } from "@/types/library";
+import type { SavedQuiz, SavedStepPlan } from "@/types/library";
 
 export function DashboardPage() {
   const { documents, loading, error: docsError } = useDocuments();
@@ -40,6 +42,12 @@ export function DashboardPage() {
     error: quizzesError,
     removeQuiz,
   } = useSavedQuizzes();
+  const {
+    plans: stepPlans,
+    loading: stepPlansLoading,
+    error: stepPlansError,
+    removePlan: removeStepPlan,
+  } = useSavedStepPlans();
 
   const [newFolderName, setNewFolderName] = useState("");
   const [folderBusy, setFolderBusy] = useState(false);
@@ -75,9 +83,9 @@ export function DashboardPage() {
 
       {!firebaseConfigured && (
         <div className="info-banner" role="status">
-          <strong>Preview mode.</strong> Folders, flashcards, and quizzes are
-          saved in this browser only. Add <code>.env.local</code> to sync to
-          Firebase.
+          <strong>Preview mode.</strong> Folders, flashcards, quizzes, and
+          step plans are saved in this browser only. Add <code>.env.local</code>{" "}
+          to sync to Firebase.
         </div>
       )}
 
@@ -325,7 +333,7 @@ export function DashboardPage() {
         </section>
       </div>
 
-      <div className="grid-2" style={{ alignItems: "stretch" }}>
+      <div className="grid-3" style={{ alignItems: "stretch" }}>
         <section className="card stack" aria-labelledby="flashcards-heading">
           <h2 id="flashcards-heading" style={{ fontSize: "1.1rem" }}>
             Flashcards
@@ -378,6 +386,37 @@ export function DashboardPage() {
             {quizzes.map((q) => (
               <li key={q.id}>
                 <SavedQuizRow quiz={q} onRemove={() => void removeQuiz(q.id)} />
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="card stack" aria-labelledby="steps-heading">
+          <h2 id="steps-heading" style={{ fontSize: "1.1rem" }}>
+            Step-by-step
+          </h2>
+          <p className="muted" style={{ margin: 0 }}>
+            Saved from study (Step-by-step mode) or this browser in preview.
+          </p>
+          {stepPlansError && (
+            <p className="error-banner" role="alert" style={{ margin: 0 }}>
+              {stepPlansError}
+            </p>
+          )}
+          {stepPlansLoading && <p className="muted" style={{ margin: 0 }}>Loading…</p>}
+          {!stepPlansLoading && stepPlans.length === 0 && (
+            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+              None yet. In <Link to="/study">Study</Link>, use Step-by-step mode,
+              then <strong>Save step plan to library</strong> on a reply.
+            </p>
+          )}
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            {stepPlans.map((p) => (
+              <li key={p.id}>
+                <SavedStepPlanRow
+                  plan={p}
+                  onRemove={() => void removeStepPlan(p.id)}
+                />
               </li>
             ))}
           </ul>
@@ -486,6 +525,61 @@ function FlashcardDeckRow({
         </div>
       </div>
       <FlashcardDeckViewer cards={deck.cards} compact />
+    </article>
+  );
+}
+
+function SavedStepPlanRow({
+  plan,
+  onRemove,
+}: {
+  plan: SavedStepPlan;
+  onRemove: () => void;
+}) {
+  const steps = plan.steps ?? [];
+  return (
+    <article
+      className="card"
+      style={{ marginBottom: "var(--space-2)", padding: "var(--space-3)" }}
+    >
+      <div
+        className="row"
+        style={{ justifyContent: "space-between", alignItems: "flex-start" }}
+      >
+        <strong>{plan.title}</strong>
+        <div className="row">
+          {plan.sourceDocId && (
+            <Link
+              to={`/study/${plan.sourceDocId}`}
+              className="button secondary"
+            >
+              Source
+            </Link>
+          )}
+          <button type="button" className="button secondary" onClick={onRemove}>
+            Delete
+          </button>
+        </div>
+      </div>
+      {steps.length > 0 ? (
+        <StepsViewer steps={steps} compact />
+      ) : (
+        <details style={{ marginTop: "var(--space-2)" }}>
+          <summary>View notes</summary>
+          <pre
+            className="muted"
+            style={{
+              whiteSpace: "pre-wrap",
+              fontSize: "0.9rem",
+              maxHeight: 220,
+              overflow: "auto",
+              margin: "var(--space-2) 0 0",
+            }}
+          >
+            {plan.content}
+          </pre>
+        </details>
+      )}
     </article>
   );
 }

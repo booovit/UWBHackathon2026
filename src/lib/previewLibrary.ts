@@ -1,4 +1,4 @@
-import type { FlashcardDeck, SavedQuiz, StudyFolder } from "@/types/library";
+import type { FlashcardDeck, SavedQuiz, SavedStepPlan, StudyFolder } from "@/types/library";
 
 const PREFIX = "studylift.previewLibrary.";
 
@@ -49,6 +49,21 @@ export function loadPreviewQuizzes(uid: string): SavedQuiz[] {
 
 export function savePreviewQuizzes(uid: string, items: SavedQuiz[]) {
   localStorage.setItem(key(uid, "quizzes"), JSON.stringify(items));
+}
+
+export function loadPreviewStepPlans(uid: string): SavedStepPlan[] {
+  try {
+    const raw = localStorage.getItem(key(uid, "stepPlans"));
+    if (!raw) return [];
+    const data = JSON.parse(raw) as SavedStepPlan[];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export function savePreviewStepPlans(uid: string, items: SavedStepPlan[]) {
+  localStorage.setItem(key(uid, "stepPlans"), JSON.stringify(items));
 }
 
 export function randomId(prefix: string) {
