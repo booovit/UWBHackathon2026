@@ -121,6 +121,7 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
           {(
             [
               ["highContrast", "High contrast"],
+              ["dyslexiaFont", "Dyslexic font"],
               ["extraSpacing", "Extra letter and line spacing"],
               ["lineFocus", "Line focus while reading"],
               ["reducedMotion", "Reduce animations"],

@@ -1,8 +1,8 @@
 {
-  "name": "studylift-functions",
+  "name": "axessify-functions",
   "private": true,
   "version": "0.1.0",
-  "description": "Firebase Cloud Functions for the Studylift accessibility-first AI study platform.",
+  "description": "Firebase Cloud Functions for the Axessify accessibility-first AI study platform.",
   "main": "lib/index.js",
   "type": "commonjs",
   "engines": {

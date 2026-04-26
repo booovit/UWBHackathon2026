@@ -117,7 +117,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       window.setTimeout(() => {
         appendLocal(
           "assistant",
-          "(Demo mode — Firebase isn't configured yet.)\n\nOnce you add your Firebase config and Gemini API key, this is where the real Studylift tutor will reply, grounded in your accessibility profile and any uploaded documents.",
+          "(Demo mode — Firebase isn't configured yet.)\n\nOnce you add your Firebase config and Gemini API key, this is where the real Axessify tutor will reply, grounded in your accessibility profile and any uploaded documents.",
         );
         setBusy(false);
       }, 500);
@@ -161,7 +161,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
             <strong style={{ fontSize: "1.05rem" }}>
               Ask the tutor anything
             </strong>
-            <p style={{ margin: 0, maxWidth: "44ch" }}>
+            <p style={{ margin: 0, maxWidth: "22rem" }}>
               Need a quick explanation, a study quiz, or help breaking down an
               assignment? Try a suggestion or type your own question.
             </p>

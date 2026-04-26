@@ -23,7 +23,7 @@ export function LandingPage() {
           Study materials that adapt to how you read, focus, and learn.
         </h1>
         <p className="lead">
-          Studylift is an AI tutor designed around real learner supports — not
+          Axessify is an AI tutor designed around real learner supports — not
           one-size-fits-all output. Chat and upload in one workspace — no
           sign-in required. Add a PDF or DOCX to ground the tutor in your
           material, then use summary, quiz, flashcards, and more from the same

@@ -1,4 +1,4 @@
-# Studylift
+# Axessify
 
 AI study help for PDFs, DOCX, and text: accessibility settings, document-grounded Gemini chat, and Firestore-backed profiles. Product details: [`ACCESSIBILITY_AI_STUDY_PLATFORM_PLAN.md`](./ACCESSIBILITY_AI_STUDY_PLATFORM_PLAN.md).
 

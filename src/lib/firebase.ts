@@ -22,7 +22,7 @@ const firebaseConfig = {
 if (!firebaseConfigured) {
   // eslint-disable-next-line no-console
   console.warn(
-    "[Studylift] Firebase env vars are missing. The UI will mount but " +
+    "[Axessify] Firebase env vars are missing. The UI will mount but " +
       "auth, Firestore, Storage, and Functions calls will fail. " +
       "Copy .env.example to .env.local and fill in your Firebase config.",
   );

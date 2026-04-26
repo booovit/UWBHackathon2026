@@ -16,6 +16,7 @@ export interface SupportFlags {
 
 export interface UiPreferences {
   fontScale: number;
+  dyslexiaFont: boolean;
   highContrast: boolean;
   extraSpacing: boolean;
   lineFocus: boolean;
@@ -51,6 +52,7 @@ export const defaultProfile: UserProfile = {
   supports: { dyslexia: false, adhd: false, lowVision: false },
   uiPreferences: {
     fontScale: 1,
+    dyslexiaFont: false,
     highContrast: false,
     extraSpacing: false,
     lineFocus: false,

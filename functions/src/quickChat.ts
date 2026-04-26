@@ -163,7 +163,7 @@ function buildSystemPrompt(profile: UserProfile, mode: StudyMode): string {
   }
 
   return [
-    "You are Studylift, an accessibility-first AI study tutor.",
+    "You are Axessify, an accessibility-first AI study tutor.",
     "Help with studying, summarizing, simplifying, quizzing, and step-by-step explanations.",
     "Never diagnose the user or label them with a disability.",
     "When the user uploads a document later, your answers should ground in that document's content.",
