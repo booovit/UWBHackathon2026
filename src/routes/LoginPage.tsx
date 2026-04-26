@@ -69,7 +69,7 @@ export function LoginPage() {
       )}
       <h1 id="login-title">{mode === "signin" ? "Sign in" : "Create account"}</h1>
       <p className="muted">
-        Studylift adapts to how you learn. Sign in to upload documents and
+        Axessify adapts to how you learn. Sign in to upload documents and
         configure your accessibility profile.
       </p>
       <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>

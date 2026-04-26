@@ -122,7 +122,7 @@ function Header() {
     <header className="app-header">
       <Link to="/" className="brand">
         <span className="brand-dot" aria-hidden="true" />
-        Studylift
+        Axessify
       </Link>
       <nav className="header-nav row" aria-label="Primary">
         <ThemeToggle />
@@ -157,7 +157,7 @@ function Header() {
           </>
         ) : (
           <>
-            <span className="badge" title="You're using Studylift as a guest">
+            <span className="badge" title="You're using Axessify as a guest">
               {isGuest ? "Guest" : "Loading"}
             </span>
             <Link to="/login" className="button">

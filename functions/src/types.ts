@@ -35,6 +35,7 @@ export interface UserProfile {
   };
   uiPreferences?: {
     fontScale?: number;
+    dyslexiaFont?: boolean;
     highContrast?: boolean;
     extraSpacing?: boolean;
     lineFocus?: boolean;
