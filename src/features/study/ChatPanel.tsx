@@ -16,41 +16,9 @@ import { callChatWithDocument } from "@/lib/functions";
 import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
 import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
 import { useProfile } from "@/features/profile/ProfileProvider";
+import { STUDY_MODES, StudyModeSelector } from "@/features/study/StudyModeSelector";
 import type { ChatMessage } from "@/types/chat";
 import type { StudyMode } from "@/types/profile";
-
-const MODES: { value: StudyMode; label: string; placeholder: string }[] = [
-  {
-    value: "chat",
-    label: "Chat",
-    placeholder: "Ask a question about this document…",
-  },
-  {
-    value: "summary",
-    label: "Summary",
-    placeholder: "Summarize this document, or a section.",
-  },
-  {
-    value: "simplify",
-    label: "Simplify",
-    placeholder: "Paste or describe what you want simplified.",
-  },
-  {
-    value: "quiz",
-    label: "Quiz",
-    placeholder: "Make a quiz from section 3 (or the whole document).",
-  },
-  {
-    value: "flashcards",
-    label: "Flashcards",
-    placeholder: "Create flashcards from the key terms.",
-  },
-  {
-    value: "steps",
-    label: "Step-by-step",
-    placeholder: "Break this assignment into steps.",
-  },
-];
 
 interface Props {
   docId: string;
@@ -124,7 +92,7 @@ export function ChatPanel({ docId, documentTitle }: Props) {
   }, [messages]);
 
   const placeholder = useMemo(
-    () => MODES.find((m) => m.value === mode)?.placeholder ?? "",
+    () => STUDY_MODES.find((m) => m.value === mode)?.placeholder ?? "",
     [mode],
   );
 
@@ -184,20 +152,7 @@ export function ChatPanel({ docId, documentTitle }: Props) {
 
   return (
     <div className="card stack" aria-label="Study chat">
-      <div className="row" role="tablist" aria-label="Study mode">
-        {MODES.map((m) => (
-          <button
-            key={m.value}
-            type="button"
-            role="tab"
-            aria-selected={mode === m.value}
-            className={mode === m.value ? "button" : "button secondary"}
-            onClick={() => setMode(m.value)}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
+      <StudyModeSelector mode={mode} onModeChange={setMode} />
 
       <div
         ref={listRef}
@@ -221,7 +176,7 @@ export function ChatPanel({ docId, documentTitle }: Props) {
               <span className="muted" style={{ fontSize: "0.85em" }}>
                 {m.role === "user" ? "You" : "Tutor"} · {m.mode ?? "chat"}
               </span>
-              <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
+              <span className="message-content">{m.content}</span>
               {(m.citations?.length ?? 0) > 0 && (
                 <span className="muted" style={{ fontSize: "0.85em" }}>
                   Sources:{" "}
