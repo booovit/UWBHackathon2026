@@ -19,8 +19,9 @@ export function LoginPage() {
   if (user && !isGuest) {
     const from = (location.state as { from?: { pathname: string } })?.from
       ?.pathname;
-    // Redirect to profile setup if onboarding not complete
-    const destination = profile.onboardingComplete ? (from ?? "/dashboard") : "/profile/setup";
+    const destination = profile.onboardingComplete
+      ? (from ?? "/dashboard")
+      : "/profile/setup";
     return <Navigate to={destination} replace />;
   }
 

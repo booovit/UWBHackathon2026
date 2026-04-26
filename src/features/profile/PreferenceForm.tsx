@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type {
+  StudyMode,
   ResponseLength,
   UserProfile,
 } from "@/types/profile";
@@ -59,52 +60,31 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
           These are areas you'd like extra support in. They influence smart
           defaults — you can always toggle individual settings below.
         </p>
-        <div className="support-cards">
+        <ul className="checkbox-list">
           {(
             [
-              {
-                key: "dyslexia",
-                label: "Reading Support",
-                description: "Dyslexia-friendly fonts, extra spacing, and line focus mode",
-                helpfulFor: "Helpful for people with dyslexia, reading difficulties, or processing disorders",
-              },
-              {
-                key: "adhd",
-                label: "Focus Support",
-                description: "Reduced distractions, step-by-step content, and shorter responses",
-                helpfulFor: "Helpful for people with ADHD, attention difficulties, or cognitive load sensitivity",
-              },
-              {
-                key: "lowVision",
-                label: "Visual Support",
-                description: "Larger text, high contrast, and screen reader friendly content",
-                helpfulFor: "Helpful for people with low vision, blindness, or color blindness",
-              },
+              ["dyslexia", "Dyslexia / reading"],
+              ["adhd", "ADHD / focus / executive function"],
+              ["lowVision", "Low vision / visual impairment"],
             ] as const
-          ).map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`support-card ${profile.supports[item.key] ? "selected" : ""}`}
-              onClick={() =>
-                update("supports", {
-                  ...profile.supports,
-                  [item.key]: !profile.supports[item.key],
-                })
-              }
-              aria-pressed={profile.supports[item.key]}
-            >
-              <div className="support-card-content">
-                <h3>{item.label}</h3>
-                <p>{item.description}</p>
-                <span className="helpful-for">{item.helpfulFor}</span>
-              </div>
-              <div className="support-card-check" aria-hidden="true">
-                {profile.supports[item.key] ? "✓" : ""}
-              </div>
-            </button>
+          ).map(([key, label]) => (
+            <li key={key}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={profile.supports[key]}
+                  onChange={(e) =>
+                    update("supports", {
+                      ...profile.supports,
+                      [key]: e.target.checked,
+                    })
+                  }
+                />
+                {label}
+              </label>
+            </li>
           ))}
-        </div>
+        </ul>
       </fieldset>
 
       <fieldset className="card stack">
@@ -187,32 +167,51 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
 
       <fieldset className="card stack">
         <legend>Study</legend>
-        <div>
-          <label htmlFor="response-length">Default response length</label>
-          <select
-            id="response-length"
-            value={profile.studyPreferences.responseLength}
-            onChange={(e) =>
-              update("studyPreferences", {
-                ...profile.studyPreferences,
-                responseLength: e.target.value as ResponseLength,
-              })
-            }
-          >
-            <option value="short">Short — brief, to-the-point answers</option>
-            <option value="medium">Medium — balanced detail</option>
-            <option value="detailed">Detailed — comprehensive explanations</option>
-          </select>
+        <div className="grid-2">
+          <div>
+            <label htmlFor="response-length">Default response length</label>
+            <select
+              id="response-length"
+              value={profile.studyPreferences.responseLength}
+              onChange={(e) =>
+                update("studyPreferences", {
+                  ...profile.studyPreferences,
+                  responseLength: e.target.value as ResponseLength,
+                })
+              }
+            >
+              <option value="short">Short</option>
+              <option value="medium">Medium</option>
+              <option value="detailed">Detailed</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="default-mode">Default study mode</label>
+            <select
+              id="default-mode"
+              value={profile.studyPreferences.defaultStudyMode}
+              onChange={(e) =>
+                update("studyPreferences", {
+                  ...profile.studyPreferences,
+                  defaultStudyMode: e.target.value as StudyMode,
+                })
+              }
+            >
+              <option value="chat">Chat</option>
+              <option value="summary">Summary</option>
+              <option value="simplify">Simplify</option>
+              <option value="quiz">Quiz</option>
+              <option value="flashcards">Flashcards</option>
+              <option value="steps">Step-by-step</option>
+            </select>
+          </div>
         </div>
-        <p className="muted" style={{ marginTop: "var(--space-4)", marginBottom: "var(--space-2)" }}>
-          Learning accommodations — select options that help you learn better
-        </p>
         <ul className="checkbox-list">
           {(
             [
-              ["readAloud", "Read aloud — text-to-speech for content"],
-              ["simplifyLanguage", "Simplified language — easier words and shorter sentences"],
-              ["oneStepAtATime", "One step at a time — break content into small pieces"],
+              ["readAloud", "Show read-aloud controls by default"],
+              ["simplifyLanguage", "Prefer simplified language"],
+              ["oneStepAtATime", "One step at a time"],
             ] as const
           ).map(([key, label]) => (
             <li key={key}>
@@ -231,71 +230,6 @@ export function PreferenceForm({ initial, onSave, submitLabel }: Props) {
               </label>
             </li>
           ))}
-        </ul>
-        <p className="muted" style={{ marginTop: "var(--space-4)", marginBottom: "var(--space-2)" }}>
-          Additional learning support
-        </p>
-        <ul className="checkbox-list">
-          <li>
-            <label>
-              <input
-                type="checkbox"
-                checked={profile.studyPreferences.visualCues ?? false}
-                onChange={(e) =>
-                  update("studyPreferences", {
-                    ...profile.studyPreferences,
-                    visualCues: e.target.checked,
-                  })
-                }
-              />
-              Visual cues — highlights and icons for important content
-            </label>
-          </li>
-          <li>
-            <label>
-              <input
-                type="checkbox"
-                checked={profile.studyPreferences.bulletPoints ?? false}
-                onChange={(e) =>
-                  update("studyPreferences", {
-                    ...profile.studyPreferences,
-                    bulletPoints: e.target.checked,
-                  })
-                }
-              />
-              Bullet points — prefer lists over paragraphs
-            </label>
-          </li>
-          <li>
-            <label>
-              <input
-                type="checkbox"
-                checked={profile.studyPreferences.extendedTime ?? false}
-                onChange={(e) =>
-                  update("studyPreferences", {
-                    ...profile.studyPreferences,
-                    extendedTime: e.target.checked,
-                  })
-                }
-              />
-              Extended time — no time pressure on quizzes
-            </label>
-          </li>
-          <li>
-            <label>
-              <input
-                type="checkbox"
-                checked={profile.studyPreferences.repeatInstructions ?? false}
-                onChange={(e) =>
-                  update("studyPreferences", {
-                    ...profile.studyPreferences,
-                    repeatInstructions: e.target.checked,
-                  })
-                }
-              />
-              Repeat instructions — restate key points multiple ways
-            </label>
-          </li>
         </ul>
       </fieldset>
 

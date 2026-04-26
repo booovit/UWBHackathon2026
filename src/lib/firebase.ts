@@ -39,10 +39,7 @@ export const functions = getFunctions(
 );
 
 if (firebaseConfigured && env.VITE_USE_EMULATORS === "true") {
-  // Only connect Auth emulator if explicitly enabled
-  if (env.VITE_USE_AUTH_EMULATOR === "true") {
-    connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  }
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);
   connectStorageEmulator(storage, "127.0.0.1", 9199);
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
