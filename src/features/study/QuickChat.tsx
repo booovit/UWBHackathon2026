@@ -17,11 +17,16 @@ import { callQuickChat } from "@/lib/functions";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProfile } from "@/features/profile/ProfileProvider";
 import { STUDY_MODES } from "@/features/study/StudyModeSelector";
+import { ArtifactMessageRenderer } from "@/features/study/ArtifactRenderers";
+import type { StructuredArtifact, StructuredArtifactType } from "@/types/studyArtifacts";
 
 interface QuickMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  mode?: string;
+  artifactType?: StructuredArtifactType;
+  artifact?: StructuredArtifact;
   timestamp?: Timestamp;
 }
 
@@ -181,8 +186,22 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
             <div key={m.id} className={`message ${m.role}`}>
               <span className="muted" style={{ fontSize: "0.78rem" }}>
                 {m.role === "user" ? "You" : "Tutor"}
+                {m.mode ? ` · ${m.mode}` : ""}
               </span>
-              <span className="message-content">{m.content}</span>
+              {m.role === "assistant" && m.artifactType ? (
+                <span className="muted" style={{ fontSize: "0.88em" }}>
+                  Interactive {m.artifactType} generated.
+                </span>
+              ) : (
+                <span className="message-content">{m.content}</span>
+              )}
+              {m.role === "assistant" && (
+                <ArtifactMessageRenderer
+                  artifactType={m.artifactType}
+                  artifact={m.artifact}
+                  compact
+                />
+              )}
             </div>
           ))
         )}

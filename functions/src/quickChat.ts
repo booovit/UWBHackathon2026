@@ -4,6 +4,9 @@ import { FUNCTIONS_REGION } from "./constants";
 import { db } from "./firebaseAdmin";
 import { GENERATION_MODEL, geminiApiKey, getGenAi } from "./geminiClient";
 import { badRequest, requireAuth } from "./errors";
+import { toFriendlyHttpsError } from "./geminiErrors";
+import { tryParseArtifact } from "./artifactParsers";
+import type { StructuredArtifact, StructuredArtifactType } from "./studyArtifacts";
 import type { StudyMode, UserProfile } from "./types";
 
 interface QuickChatRequest {
@@ -13,6 +16,8 @@ interface QuickChatRequest {
 
 interface QuickChatResponse {
   content: string;
+  artifactType?: StructuredArtifactType;
+  artifact?: StructuredArtifact;
 }
 
 const VALID_MODES: StudyMode[] = [
@@ -31,11 +36,11 @@ const MODE_INSTRUCTIONS: Record<StudyMode, string> = {
   simplify:
     "Rewrite or explain the requested content in plain, simple language. Use shorter sentences and define hard terms.",
   quiz:
-    "Create study questions from the conversation or topic. Mix multiple-choice and short answer. Provide answer keys after each question.",
+    "Create study questions from the conversation or topic as JSON: [{\"prompt\":\"...\",\"kind\":\"mcq\",\"options\":[\"...\"],\"correctAnswer\":\"...\",\"explanation\":\"...\"}]. Use kind \"written\" for open questions. Output only the JSON array.",
   flashcards:
     "Create study flashcards as a JSON array like [{\"front\":\"...\",\"back\":\"...\"}]. Output only the JSON array.",
   steps:
-    "Break the requested task into a short, ordered list of concrete steps. One action per step.",
+    "Break the requested task into a short, ordered list of concrete steps as JSON: [{\"title\":\"...\",\"instruction\":\"...\"}]. Output only the JSON array.",
 };
 
 export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
@@ -86,18 +91,28 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
       }));
 
     const ai = getGenAi();
-    const result = await ai.models.generateContent({
-      model: GENERATION_MODEL,
-      contents: buildPrompt(message, history),
-      config: {
-        systemInstruction: buildSystemPrompt(profile, mode),
-        temperature: 0.5,
-      },
-    });
+    const generationConfig: Record<string, unknown> = {
+      systemInstruction: buildSystemPrompt(profile, mode),
+      temperature: 0.5,
+    };
+    if (mode === "flashcards" || mode === "quiz" || mode === "steps") {
+      generationConfig.responseMimeType = "application/json";
+    }
+    let result;
+    try {
+      result = await ai.models.generateContent({
+        model: GENERATION_MODEL,
+        contents: buildPrompt(message, history),
+        config: generationConfig as never,
+      });
+    } catch (err) {
+      throw toFriendlyHttpsError(err);
+    }
 
     const content =
       result.text?.trim() ??
       "I couldn't generate a response. Please try rephrasing your question.";
+    const { artifactType, artifact } = tryParseArtifact(mode, content);
 
     const batch = db.batch();
     batch.set(
@@ -115,11 +130,13 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
       role: "assistant",
       content,
       mode,
+      artifactType: artifactType ?? null,
+      artifact: artifact ?? null,
       timestamp: FieldValue.serverTimestamp(),
     });
     await batch.commit();
 
-    return { content };
+    return { content, artifactType, artifact };
   },
 );
 

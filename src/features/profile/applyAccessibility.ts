@@ -8,6 +8,7 @@ export function useApplyAccessibility(prefs: UiPreferences) {
     root.dataset.spacing = prefs.extraSpacing ? "extra" : "default";
     root.dataset.lineWidth = prefs.maxLineWidth;
     root.dataset.lineFocus = prefs.lineFocus ? "true" : "false";
+    root.dataset.userContrast = prefs.highContrast ? "high" : "normal";
     root.dataset.largePrint = prefs.fontScale >= 2 ? "true" : "false";
     root.dataset.reducedMotion = prefs.reducedMotion ? "true" : "false";
   }, [prefs]);
