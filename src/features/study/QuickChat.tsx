@@ -15,13 +15,24 @@ import type { Timestamp } from "firebase/firestore";
 import { db, firebaseConfigured } from "@/lib/firebase";
 import { callQuickChat } from "@/lib/functions";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
+import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
+import { useSavedStepPlans } from "@/features/library/useSavedStepPlans";
 import { useProfile } from "@/features/profile/ProfileProvider";
+import { inferStudyModeFromMessage } from "@/features/study/inferStudyModeFromMessage";
 import { STUDY_MODES } from "@/features/study/StudyModeSelector";
 import {
   ArtifactMessageRenderer,
   TextResponseRenderer,
 } from "@/features/study/ArtifactRenderers";
-import type { StructuredArtifact, StructuredArtifactType } from "@/types/studyArtifacts";
+import type { StudyMode } from "@/types/profile";
+import type {
+  FlashcardsArtifact,
+  QuizArtifact,
+  StepsArtifact,
+  StructuredArtifact,
+  StructuredArtifactType,
+} from "@/types/studyArtifacts";
 
 interface QuickMessage {
   id: string;
@@ -60,9 +71,14 @@ const SUGGESTIONS = [
   "Make flashcards for the Krebs cycle",
 ];
 
+const QUICK_CHAT_LIBRARY_TITLE = "General chat";
+
 export function QuickChat({ embedded }: { embedded?: boolean }) {
   const { user, loading: authLoading } = useAuth();
-  const { profile } = useProfile();
+  const { profile, saveProfile } = useProfile();
+  const { createDeck } = useFlashcardDecks();
+  const { createQuiz } = useSavedQuizzes();
+  const { createStepPlan } = useSavedStepPlans();
   const mode = profile.studyPreferences.defaultStudyMode;
   const [messages, setMessages] = useState<QuickMessage[]>([]);
   const [pendingMessages, setPendingMessages] = useState<QuickMessage[]>([]);
@@ -70,6 +86,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listenerError, setListenerError] = useState<string | null>(null);
+  const [saveHint, setSaveHint] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,6 +132,58 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
 
   const visibleMessages = sortMessages([...messages, ...pendingMessages]);
 
+  async function saveFlashcardsToLibrary(artifact: FlashcardsArtifact) {
+    setSaveHint(null);
+    try {
+      if (artifact.cards.length === 0) {
+        throw new Error("No flashcards found to save.");
+      }
+      await createDeck(`Flashcards · ${QUICK_CHAT_LIBRARY_TITLE}`, artifact.cards, null);
+      setSaveHint("Flashcards saved to your library.");
+      window.setTimeout(() => setSaveHint(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save flashcards.");
+    }
+  }
+
+  async function saveQuizToLibrary(artifact: QuizArtifact, fallbackText: string) {
+    setSaveHint(null);
+    try {
+      if ((artifact.questions ?? []).length === 0) {
+        throw new Error("No quiz questions found to save.");
+      }
+      await createQuiz(
+        `Quiz · ${QUICK_CHAT_LIBRARY_TITLE}`,
+        fallbackText.trim(),
+        null,
+        artifact.questions,
+      );
+      setSaveHint("Quiz saved to your library.");
+      window.setTimeout(() => setSaveHint(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save quiz.");
+    }
+  }
+
+  async function saveStepsToLibrary(artifact: StepsArtifact, fallbackText: string) {
+    setSaveHint(null);
+    try {
+      if ((artifact.steps ?? []).length === 0) {
+        throw new Error("No steps found to save.");
+      }
+      await createStepPlan(
+        `Steps · ${QUICK_CHAT_LIBRARY_TITLE}`,
+        artifact.steps,
+        fallbackText.trim(),
+        null,
+      );
+      setSaveHint("Step-by-step plan saved to your library.");
+      window.setTimeout(() => setSaveHint(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save steps.");
+    }
+  }
+
   function appendLocal(role: "user" | "assistant", content: string) {
     setMessages((prev) => [
       ...prev,
@@ -149,13 +218,28 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       setError("Still preparing your session — try again in a second.");
       return;
     }
+
+    const inferred = inferStudyModeFromMessage(trimmed);
+    const effectiveMode: StudyMode = inferred ?? mode;
+
+    if (inferred && inferred !== mode) {
+      void saveProfile({
+        studyPreferences: {
+          ...profile.studyPreferences,
+          defaultStudyMode: inferred,
+        },
+      }).catch((err) => {
+        console.error("Could not save study mode from message hint", err);
+      });
+    }
+
     setPendingMessages((prev) => [
       ...prev,
       {
         id: `pending-${Date.now()}-${Math.random()}`,
         role: "user",
         content: trimmed,
-        mode,
+        mode: effectiveMode,
         createdAt: Date.now(),
       },
     ]);
@@ -163,7 +247,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      await callQuickChat({ message: trimmed, mode });
+      await callQuickChat({ message: trimmed, mode: effectiveMode });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
     } finally {
@@ -234,6 +318,54 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
                   compact
                 />
               )}
+              {m.role === "assistant" &&
+                m.artifactType === "flashcards" &&
+                m.artifact &&
+                (m.artifact as FlashcardsArtifact).cards?.length > 0 && (
+                <div className="row" style={{ marginTop: "var(--space-2)" }}>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() =>
+                      void saveFlashcardsToLibrary(m.artifact as FlashcardsArtifact)
+                    }
+                  >
+                    Save to library
+                  </button>
+                </div>
+              )}
+              {m.role === "assistant" &&
+                m.artifactType === "quiz" &&
+                m.artifact &&
+                (m.artifact as QuizArtifact).questions?.length > 0 && (
+                <div className="row" style={{ marginTop: "var(--space-2)" }}>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() =>
+                      void saveQuizToLibrary(m.artifact as QuizArtifact, m.content)
+                    }
+                  >
+                    Save quiz to library
+                  </button>
+                </div>
+              )}
+              {m.role === "assistant" &&
+                m.artifactType === "steps" &&
+                m.artifact &&
+                (m.artifact as StepsArtifact).steps?.length > 0 && (
+                <div className="row" style={{ marginTop: "var(--space-2)" }}>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() =>
+                      void saveStepsToLibrary(m.artifact as StepsArtifact, m.content)
+                    }
+                  >
+                    Save step plan to library
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}
@@ -247,7 +379,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
         )}
       </div>
 
-      {(error || authLoading || listenerError) && (
+      {(error || authLoading || listenerError || saveHint) && (
         <div style={{ padding: "0 var(--space-4)", paddingTop: "var(--space-3)" }}>
           {authLoading && <p className="muted">Preparing your session…</p>}
           {listenerError && (
@@ -258,6 +390,11 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
           {error && (
             <div className="error-banner" role="alert">
               {error}
+            </div>
+          )}
+          {saveHint && (
+            <div className="info-banner" role="status">
+              {saveHint}
             </div>
           )}
         </div>

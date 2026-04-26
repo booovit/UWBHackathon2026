@@ -15,7 +15,9 @@ import { db, firebaseConfigured } from "@/lib/firebase";
 import { callChatWithDocument } from "@/lib/functions";
 import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
 import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
+import { useSavedStepPlans } from "@/features/library/useSavedStepPlans";
 import { useProfile } from "@/features/profile/ProfileProvider";
+import { inferStudyModeFromMessage } from "@/features/study/inferStudyModeFromMessage";
 import { STUDY_MODES, StudyModeSelector } from "@/features/study/StudyModeSelector";
 import {
   ArtifactMessageRenderer,
@@ -23,7 +25,11 @@ import {
 } from "@/features/study/ArtifactRenderers";
 import type { ChatMessage } from "@/types/chat";
 import type { StudyMode } from "@/types/profile";
-import type { FlashcardsArtifact, QuizArtifact } from "@/types/studyArtifacts";
+import type {
+  FlashcardsArtifact,
+  QuizArtifact,
+  StepsArtifact,
+} from "@/types/studyArtifacts";
 
 interface Props {
   docId: string;
@@ -50,9 +56,10 @@ function hasSavedMatch(saved: ChatMessage[], pending: ChatMessage) {
 }
 
 export function ChatPanel({ docId, documentTitle }: Props) {
-  const { profile } = useProfile();
+  const { profile, saveProfile } = useProfile();
   const { createDeck } = useFlashcardDecks();
   const { createQuiz } = useSavedQuizzes();
+  const { createStepPlan } = useSavedStepPlans();
   const [mode, setMode] = useState<StudyMode>(
     profile.studyPreferences.defaultStudyMode,
   );
@@ -129,33 +136,54 @@ export function ChatPanel({ docId, documentTitle }: Props) {
     event.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || busy) return;
+
+    const inferred = inferStudyModeFromMessage(trimmed);
+    const effectiveMode = inferred ?? mode;
+
+    if (inferred && inferred !== mode) {
+      setMode(inferred);
+      setError(null);
+      setListenerError(null);
+      setSaveHint(null);
+      void saveProfile({
+        studyPreferences: {
+          ...profile.studyPreferences,
+          defaultStudyMode: inferred,
+        },
+      }).catch((err) => {
+        console.error("Could not save study mode from message hint", err);
+      });
+    }
+
     const optimisticUserMessage: ChatMessage = {
       id: `pending-${Date.now()}-${Math.random()}`,
       role: "user",
       content: trimmed,
       retrievedChunkIds: [],
       citations: [],
-      mode,
+      mode: effectiveMode,
       createdAt: Date.now(),
     };
     setPendingMessagesByMode((prev) => ({
       ...prev,
-      [mode]: [...(prev[mode] ?? []), optimisticUserMessage],
+      [effectiveMode]: [...(prev[effectiveMode] ?? []), optimisticUserMessage],
     }));
     setInput("");
     setBusy(true);
     setError(null);
     try {
-      const currentChatId = chatIdByMode[mode];
+      const currentChatId = chatIdByMode[effectiveMode];
       const result = await callChatWithDocument({
         docId,
         chatId: currentChatId,
         message: trimmed,
-        mode,
+        mode: effectiveMode,
       });
       const returnedId = result.data.chatId;
       setChatIdByMode((prev) =>
-        prev[mode] === returnedId ? prev : { ...prev, [mode]: returnedId },
+        prev[effectiveMode] === returnedId
+          ? prev
+          : { ...prev, [effectiveMode]: returnedId },
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
@@ -188,7 +216,7 @@ export function ChatPanel({ docId, documentTitle }: Props) {
       }
       await createQuiz(
         `Quiz · ${title}`,
-        fallbackText,
+        fallbackText.trim(),
         docId,
         artifact.questions,
       );
@@ -196,6 +224,26 @@ export function ChatPanel({ docId, documentTitle }: Props) {
       window.setTimeout(() => setSaveHint(null), 4000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save quiz.");
+    }
+  }
+
+  async function saveStepsToLibrary(artifact: StepsArtifact, fallbackText: string) {
+    setSaveHint(null);
+    const title = documentTitle?.trim() || "Document";
+    try {
+      if ((artifact.steps ?? []).length === 0) {
+        throw new Error("No steps found to save.");
+      }
+      await createStepPlan(
+        `Steps · ${title}`,
+        artifact.steps,
+        fallbackText.trim(),
+        docId,
+      );
+      setSaveHint("Step-by-step plan saved to your library.");
+      window.setTimeout(() => setSaveHint(null), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save steps.");
     }
   }
 
@@ -310,6 +358,22 @@ export function ChatPanel({ docId, documentTitle }: Props) {
                     }
                   >
                     Save quiz to library
+                  </button>
+                </div>
+              )}
+              {m.role === "assistant" &&
+                m.artifactType === "steps" &&
+                m.artifact &&
+                (m.artifact as StepsArtifact).steps?.length > 0 && (
+                <div className="row" style={{ marginTop: "var(--space-2)" }}>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() =>
+                      void saveStepsToLibrary(m.artifact as StepsArtifact, m.content)
+                    }
+                  >
+                    Save step plan to library
                   </button>
                 </div>
               )}

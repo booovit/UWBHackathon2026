@@ -76,13 +76,18 @@ export function useSavedQuizzes() {
     sourceDocId?: string | null,
     questions?: StructuredQuizQuestion[],
   ) {
-    if (!uid || !title.trim() || !content.trim()) return;
+    if (!uid || !title.trim()) return;
+    const hasQuestions = (questions?.length ?? 0) > 0;
+    const storedContent =
+      content.trim() ||
+      (hasQuestions ? "Structured quiz saved from study chat." : "");
+    if (!storedContent.trim() && !hasQuestions) return;
     if (!firebaseConfigured || isDemoUser) {
       const list = loadPreviewQuizzes(uid);
       const q: SavedQuiz = {
         id: randomId("quiz"),
         title: title.trim(),
-        content: content.trim(),
+        content: storedContent,
         questions: questions ?? [],
         sourceDocId: sourceDocId ?? null,
       };
@@ -93,7 +98,7 @@ export function useSavedQuizzes() {
     }
     await addDoc(collection(db, "users", uid, "quizzes"), {
       title: title.trim(),
-      content: content.trim(),
+      content: storedContent,
       questions: questions ?? [],
       sourceDocId: sourceDocId ?? null,
       createdAt: serverTimestamp(),
