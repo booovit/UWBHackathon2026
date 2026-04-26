@@ -54,3 +54,11 @@ export interface ExtractedSection {
   pageNumber: number | null;
   heading: string | null;
 }
+
+export type {
+  StructuredArtifact,
+  StructuredArtifactType,
+  StructuredFlashcard,
+  StructuredQuizQuestion,
+  StructuredStep,
+} from "./studyArtifacts";

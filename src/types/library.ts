@@ -1,4 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
+import type { StructuredQuizQuestion } from "./studyArtifacts";
 
 export interface StudyFolder {
   id: string;
@@ -25,8 +26,10 @@ export interface FlashcardDeck {
 export interface SavedQuiz {
   id: string;
   title: string;
-  /** Free-form text (e.g. markdown) of the quiz content */
+  /** Backward-compatible free-form text content from older saves */
   content: string;
+  /** Structured questions for interactive quizzes */
+  questions?: StructuredQuizQuestion[];
   sourceDocId?: string | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;

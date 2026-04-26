@@ -7,4 +7,9 @@ if (getApps().length === 0) {
 }
 
 export const db = getFirestore();
+try {
+  db.settings({ ignoreUndefinedProperties: true });
+} catch {
+  // settings() can only be called once per Firestore instance; ignore if already set.
+}
 export const storage = getStorage();

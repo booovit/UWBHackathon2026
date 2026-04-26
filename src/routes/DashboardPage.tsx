@@ -6,6 +6,10 @@ import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
 import { useStudyFolders } from "@/features/library/useStudyFolders";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProfile } from "@/features/profile/ProfileProvider";
+import {
+  FlashcardDeckViewer,
+  QuizRunner,
+} from "@/features/study/ArtifactRenderers";
 import { firebaseConfigured } from "@/lib/firebase";
 import type { StudyDocument } from "@/types/document";
 import type { FlashcardDeck } from "@/types/library";
@@ -460,7 +464,6 @@ function FlashcardDeckRow({
   deck: FlashcardDeck;
   onRemove: () => void;
 }) {
-  const preview = deck.cards[0]?.back?.slice(0, 200) ?? "";
   return (
     <article
       className="card"
@@ -482,11 +485,7 @@ function FlashcardDeckRow({
           </button>
         </div>
       </div>
-      {preview && (
-        <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-          {preview}…
-        </p>
-      )}
+      <FlashcardDeckViewer cards={deck.cards} compact />
     </article>
   );
 }
@@ -498,6 +497,7 @@ function SavedQuizRow({
   quiz: SavedQuiz;
   onRemove: () => void;
 }) {
+  const hasStructured = (quiz.questions?.length ?? 0) > 0;
   return (
     <article
       className="card"
@@ -522,21 +522,25 @@ function SavedQuizRow({
           </button>
         </div>
       </div>
-      <details style={{ marginTop: "var(--space-2)" }}>
-        <summary>View</summary>
-        <pre
-          className="muted"
-          style={{
-            whiteSpace: "pre-wrap",
-            fontSize: "0.9rem",
-            maxHeight: 220,
-            overflow: "auto",
-            margin: "var(--space-2) 0 0",
-          }}
-        >
-          {quiz.content}
-        </pre>
-      </details>
+      {hasStructured ? (
+        <QuizRunner quiz={{ questions: quiz.questions ?? [] }} compact />
+      ) : (
+        <details style={{ marginTop: "var(--space-2)" }}>
+          <summary>View</summary>
+          <pre
+            className="muted"
+            style={{
+              whiteSpace: "pre-wrap",
+              fontSize: "0.9rem",
+              maxHeight: 220,
+              overflow: "auto",
+              margin: "var(--space-2) 0 0",
+            }}
+          >
+            {quiz.content}
+          </pre>
+        </details>
+      )}
     </article>
   );
 }

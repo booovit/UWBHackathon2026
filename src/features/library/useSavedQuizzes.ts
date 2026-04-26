@@ -17,6 +17,7 @@ import {
   savePreviewQuizzes,
 } from "@/lib/previewLibrary";
 import type { SavedQuiz } from "@/types/library";
+import type { StructuredQuizQuestion } from "@/types/studyArtifacts";
 
 export function useSavedQuizzes() {
   const { user, isDemoUser } = useAuth();
@@ -73,6 +74,7 @@ export function useSavedQuizzes() {
     title: string,
     content: string,
     sourceDocId?: string | null,
+    questions?: StructuredQuizQuestion[],
   ) {
     if (!uid || !title.trim() || !content.trim()) return;
     if (!firebaseConfigured || isDemoUser) {
@@ -81,6 +83,7 @@ export function useSavedQuizzes() {
         id: randomId("quiz"),
         title: title.trim(),
         content: content.trim(),
+        questions: questions ?? [],
         sourceDocId: sourceDocId ?? null,
       };
       list.push(q);
@@ -91,6 +94,7 @@ export function useSavedQuizzes() {
     await addDoc(collection(db, "users", uid, "quizzes"), {
       title: title.trim(),
       content: content.trim(),
+      questions: questions ?? [],
       sourceDocId: sourceDocId ?? null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
