@@ -13,34 +13,6 @@ import { ProfileSetupPage } from "@/routes/ProfileSetupPage";
 import { StudyPage } from "@/routes/StudyPage";
 import { ThemeToggle } from "@/features/theme/ThemeProvider";
 
-const LARGE_PRINT_SCALE = 2.4;
-
-function BigFontToggle() {
-  const { profile, saveProfile } = useProfile();
-  const isActive = profile.uiPreferences.fontScale >= LARGE_PRINT_SCALE;
-
-  function toggle() {
-    void saveProfile({
-      uiPreferences: {
-        ...profile.uiPreferences,
-        fontScale: isActive ? 1.0 : LARGE_PRINT_SCALE,
-      },
-    });
-  }
-
-  return (
-    <button
-      type="button"
-      className={isActive ? "big-font-toggle active" : "big-font-toggle"}
-      aria-pressed={isActive}
-      onClick={toggle}
-      aria-label={isActive ? "Turn off big font" : "Turn on big font for visual impairment"}
-    >
-      {isActive ? "Big Font ON" : "Big Font"}
-    </button>
-  );
-}
-
 export function App() {
   const { profile } = useProfile();
   useApplyAccessibility(profile.uiPreferences);
@@ -169,7 +141,6 @@ function Header() {
       </Link>
       <nav className="header-nav row" aria-label="Primary">
         <ThemeToggle />
-        <BigFontToggle />
         <NavLink to="/study" className={headerNavTabClassName}>
           Study
         </NavLink>
