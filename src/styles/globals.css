@@ -35,11 +35,47 @@
   --line-height: 1.6;
   --letter-spacing: 0;
   --paragraph-gap: 1em;
-  --max-line-width: 72ch;
+  --max-line-width: 36rem;
+  --font-readable: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-dyslexia: "OpenDyslexic", "Atkinson Hyperlegible", "Comic Sans MS",
+    "Trebuchet MS", Verdana, sans-serif;
 
   --focus-ring: 3px solid var(--color-primary);
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
     0 18px 40px -28px rgba(0, 0, 0, 0.55);
+}
+
+@font-face {
+  font-family: "OpenDyslexic";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  size-adjust: 86%;
+  ascent-override: 104%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+  src:
+    url("https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-400-normal.woff2")
+      format("woff2"),
+    url("https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-400-normal.woff")
+      format("woff");
+}
+
+@font-face {
+  font-family: "OpenDyslexic";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  size-adjust: 86%;
+  ascent-override: 104%;
+  descent-override: 28%;
+  line-gap-override: 0%;
+  src:
+    url("https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-700-normal.woff2")
+      format("woff2"),
+    url("https://cdn.jsdelivr.net/fontsource/fonts/opendyslexic@latest/latin-700-normal.woff")
+      format("woff");
 }
 
 [data-theme="light"] {
@@ -104,11 +140,11 @@
   --line-height: 1.95;
   --letter-spacing: 0.04em;
   --paragraph-gap: 1.6em;
-  --max-line-width: 56ch;
+  --max-line-width: 28rem;
 }
 
 [data-line-width="narrow"] {
-  --max-line-width: 48ch;
+  --max-line-width: 24rem;
 }
 
 * {
@@ -127,8 +163,7 @@ html {
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-readable);
   background:
     radial-gradient(
       900px 450px at 100% 0%,
@@ -145,6 +180,18 @@ body {
   line-height: var(--line-height);
   letter-spacing: var(--letter-spacing);
   -webkit-font-smoothing: antialiased;
+}
+
+[data-dyslexia-font="true"] body,
+[data-dyslexia-font="true"] button,
+[data-dyslexia-font="true"] input,
+[data-dyslexia-font="true"] select,
+[data-dyslexia-font="true"] textarea {
+  font-family: var(--font-dyslexia);
+}
+
+.dyslexia-font-toggle {
+  font-family: var(--font-dyslexia);
 }
 
 [data-theme="light"] body {
@@ -725,7 +772,7 @@ legend {
 .hero .lead {
   font-size: 1.05rem;
   color: var(--color-text-muted);
-  max-width: 60ch;
+  max-width: 30rem;
 }
 
 .feature-list {
@@ -743,39 +790,6 @@ legend {
 }
 
 /* Large print mode — visual impairment */
-.large-print-btn {
-  font-size: 1rem;
-  font-weight: 700;
-  border: 2px solid var(--color-border-strong);
-  background: var(--color-surface-alt);
-  color: var(--color-text);
-}
-
-.large-print-btn.active,
-.large-print-btn[aria-pressed="true"] {
-  background: #7c3aed;
-  border-color: #7c3aed;
-  color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.35);
-}
-
-.large-print-btn:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-primary);
-}
-
-.large-print-btn.active:hover,
-.large-print-btn[aria-pressed="true"]:hover {
-  background: #6d28d9;
-  border-color: #6d28d9;
-}
-
-[data-contrast="high"] .large-print-btn[aria-pressed="true"] {
-  background: #ffe600;
-  border-color: #ffe600;
-  color: #000000;
-}
-
 /* Big Font toggle — always large so visually impaired users can find it */
 .big-font-toggle {
   font-size: 2.8rem;
@@ -892,7 +906,7 @@ legend {
 
 [data-large-print="true"] .app-header .muted {
   align-self: center;
-  max-width: 18ch;
+  max-width: 9rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
