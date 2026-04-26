@@ -4,6 +4,7 @@ import { useDocuments } from "@/features/documents/useDocuments";
 import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
 import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
 import { useSavedStepPlans } from "@/features/library/useSavedStepPlans";
+import { useQuickChats } from "@/features/library/useQuickChats";
 import { useStudyFolders } from "@/features/library/useStudyFolders";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useProfile } from "@/features/profile/ProfileProvider";
@@ -54,6 +55,11 @@ export function DashboardPage() {
     error: stepPlansError,
     removePlan: removeStepPlan,
   } = useSavedStepPlans();
+  const {
+    chats: quickChats,
+    loading: quickChatsLoading,
+    error: quickChatsError,
+  } = useQuickChats();
 
   const [newFolderName, setNewFolderName] = useState("");
   const [folderBusy, setFolderBusy] = useState(false);
@@ -157,6 +163,11 @@ export function DashboardPage() {
           <p className="muted" style={{ margin: 0 }}>
             General study chat and document-scoped conversations.
           </p>
+          {quickChatsError && (
+            <p className="error-banner" role="alert" style={{ margin: 0 }}>
+              {quickChatsError}
+            </p>
+          )}
           <ul
             className="stack"
             style={{ listStyle: "none", padding: 0, gap: "var(--space-2)" }}
@@ -167,9 +178,36 @@ export function DashboardPage() {
                 className="button secondary"
                 style={{ width: "100%" }}
               >
-                General study chat
+                Start new general chat
               </Link>
             </li>
+            {quickChatsLoading && (
+              <li className="muted" style={{ fontSize: "0.9rem" }}>
+                Loading chats...
+              </li>
+            )}
+            {quickChats.map((chat) => (
+              <li key={chat.id}>
+                <Link
+                  to={`/study?chat=${encodeURIComponent(chat.id)}`}
+                  className="button secondary"
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    justifyContent: "flex-start",
+                  }}
+                >
+                  <span className="stack" style={{ gap: "2px", minWidth: 0 }}>
+                    <span>{chat.title}</span>
+                    {chat.lastMessage && (
+                      <span className="muted" style={{ fontSize: "0.82rem" }}>
+                        {chat.lastMessage}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </li>
+            ))}
             {documents
               .filter(
                 (d) =>
@@ -191,10 +229,9 @@ export function DashboardPage() {
                   </Link>
                 </li>
               ))}
-            {documents.length === 0 && !loading && (
+            {documents.length === 0 && quickChats.length === 0 && !loading && !quickChatsLoading && (
               <li className="muted" style={{ fontSize: "0.9rem" }}>
-                No document chats yet. Add a file from{" "}
-                <Link to="/study">Study</Link>.
+                No saved chats yet. Start one from <Link to="/study">Study</Link>.
               </li>
             )}
           </ul>

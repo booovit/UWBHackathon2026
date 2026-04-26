@@ -12,9 +12,11 @@ import type { StudyMode, UserProfile } from "./types";
 interface QuickChatRequest {
   message?: string;
   mode?: StudyMode;
+  chatId?: string;
 }
 
 interface QuickChatResponse {
+  chatId: string;
   content: string;
   artifactType?: StructuredArtifactType;
   artifact?: StructuredArtifact;
@@ -57,11 +59,15 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
 
     const message = request.data?.message;
     const mode = request.data?.mode ?? "chat";
+    const requestedChatId = request.data?.chatId?.trim();
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       badRequest("message is required");
     }
     if (message.length > 4000) badRequest("Message is too long.");
     if (!VALID_MODES.includes(mode)) badRequest("Unknown study mode");
+    if (requestedChatId && !/^[A-Za-z0-9_-]{1,128}$/.test(requestedChatId)) {
+      badRequest("Invalid chat id.");
+    }
 
     const profileSnap = await db
       .collection("users")
@@ -71,12 +77,18 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
       .get();
     const profile = (profileSnap.data() as UserProfile | undefined) ?? {};
 
-    const chatRef = db
+    const chatCollection = db
       .collection("users")
       .doc(uid)
-      .collection("quickChat")
-      .doc("main");
+      .collection("quickChat");
+    const chatRef = requestedChatId
+      ? chatCollection.doc(requestedChatId)
+      : chatCollection.doc();
     const messagesRef = chatRef.collection("messages");
+    const chatSnap = await chatRef.get();
+    const existingChat = chatSnap.data() as
+      | { title?: string; createdAt?: unknown }
+      | undefined;
 
     const recentSnap = await messagesRef
       .orderBy("timestamp", "desc")
@@ -116,9 +128,17 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
     const { artifactType, artifact } = tryParseArtifact(mode, content);
 
     const batch = db.batch();
+    const title = existingChat?.title || makeChatTitle(message);
     batch.set(
       chatRef,
-      { uid, updatedAt: FieldValue.serverTimestamp() },
+      {
+        uid,
+        title,
+        lastMessage: message.trim().slice(0, 180),
+        messageCount: FieldValue.increment(2),
+        createdAt: existingChat?.createdAt ?? FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
       { merge: true },
     );
     batch.set(messagesRef.doc(), {
@@ -137,9 +157,15 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
     });
     await batch.commit();
 
-    return { content, artifactType, artifact };
+    return { chatId: chatRef.id, content, artifactType, artifact };
   },
 );
+
+function makeChatTitle(message: string): string {
+  const compact = message.trim().replace(/\s+/g, " ");
+  if (!compact) return "General chat";
+  return compact.length > 64 ? `${compact.slice(0, 61)}...` : compact;
+}
 
 function buildSystemPrompt(profile: UserProfile, mode: StudyMode): string {
   const study = profile.studyPreferences ?? {};

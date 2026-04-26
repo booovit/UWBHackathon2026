@@ -52,3 +52,12 @@ export interface SavedStepPlan {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
+
+export interface SavedQuickChat {
+  id: string;
+  title: string;
+  lastMessage?: string;
+  messageCount?: number;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}

@@ -11,6 +11,7 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
+import { useSearchParams } from "react-router-dom";
 import type { Timestamp } from "firebase/firestore";
 import { db, firebaseConfigured } from "@/lib/firebase";
 import { callQuickChat } from "@/lib/functions";
@@ -80,6 +81,8 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
   const { createQuiz } = useSavedQuizzes();
   const { createStepPlan } = useSavedStepPlans();
   const mode = profile.studyPreferences.defaultStudyMode;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeChatId = searchParams.get("chat")?.trim() || null;
   const [messages, setMessages] = useState<QuickMessage[]>([]);
   const [pendingMessages, setPendingMessages] = useState<QuickMessage[]>([]);
   const [input, setInput] = useState("");
@@ -90,14 +93,14 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!user || !firebaseConfigured) {
+    if (!user || !firebaseConfigured || !activeChatId) {
       setMessages([]);
       setPendingMessages([]);
       setListenerError(null);
       return;
     }
     const q = query(
-      collection(db, "users", user.uid, "quickChat", "main", "messages"),
+      collection(db, "users", user.uid, "quickChat", activeChatId, "messages"),
       orderBy("timestamp", "asc"),
       limit(50),
     );
@@ -121,7 +124,7 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
         );
       },
     );
-  }, [user]);
+  }, [user, activeChatId]);
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -131,6 +134,20 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
   }, [messages, pendingMessages]);
 
   const visibleMessages = sortMessages([...messages, ...pendingMessages]);
+
+  function startNewChat() {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("chat");
+      return next;
+    });
+    setMessages([]);
+    setPendingMessages([]);
+    setInput("");
+    setError(null);
+    setListenerError(null);
+    setSaveHint(null);
+  }
 
   async function saveFlashcardsToLibrary(artifact: FlashcardsArtifact) {
     setSaveHint(null);
@@ -247,7 +264,19 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      await callQuickChat({ message: trimmed, mode: effectiveMode });
+      const result = await callQuickChat({
+        message: trimmed,
+        mode: effectiveMode,
+        chatId: activeChatId ?? undefined,
+      });
+      const returnedChatId = result.data.chatId;
+      if (returnedChatId && returnedChatId !== activeChatId) {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("chat", returnedChatId);
+          return next;
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
     } finally {
@@ -268,6 +297,26 @@ export function QuickChat({ embedded }: { embedded?: boolean }) {
       <h2 id="quickchat-title" className="visually-hidden">
         Tutor chat
       </h2>
+
+      <div
+        className="row"
+        style={{
+          justifyContent: "space-between",
+          padding: "var(--space-3) var(--space-4) 0",
+        }}
+      >
+        <span className="muted" style={{ fontSize: "0.9rem" }}>
+          {activeChatId ? "Saved general chat" : "New general chat"}
+        </span>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={startNewChat}
+          disabled={busy || (!activeChatId && visibleMessages.length === 0)}
+        >
+          New chat
+        </button>
+      </div>
 
       <div ref={listRef} className="chat-thread" aria-live="polite">
         {visibleMessages.length === 0 ? (
