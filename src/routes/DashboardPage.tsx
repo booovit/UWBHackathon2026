@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDocuments } from "@/features/documents/useDocuments";
 import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
@@ -28,6 +28,12 @@ export function DashboardPage() {
     createFolder,
     addDocumentToFolder,
     removeDocumentFromFolder,
+    addDeckToFolder,
+    removeDeckFromFolder,
+    addQuizToFolder,
+    removeQuizFromFolder,
+    addStepPlanToFolder,
+    removeStepPlanFromFolder,
     removeFolder,
   } = useStudyFolders();
   const {
@@ -51,9 +57,6 @@ export function DashboardPage() {
 
   const [newFolderName, setNewFolderName] = useState("");
   const [folderBusy, setFolderBusy] = useState(false);
-  const [addDocByFolder, setAddDocByFolder] = useState<Record<string, string>>(
-    {},
-  );
 
   async function onCreateFolder() {
     if (!newFolderName.trim()) return;
@@ -69,6 +72,19 @@ export function DashboardPage() {
   const docById = Object.fromEntries(
     documents.map((d) => [d.id, d] as const),
   ) as Record<string, StudyDocument>;
+
+  const deckById = useMemo(
+    () => Object.fromEntries(decks.map((d) => [d.id, d] as const)),
+    [decks],
+  );
+  const quizById = useMemo(
+    () => Object.fromEntries(quizzes.map((q) => [q.id, q] as const)),
+    [quizzes],
+  );
+  const planById = useMemo(
+    () => Object.fromEntries(stepPlans.map((p) => [p.id, p] as const)),
+    [stepPlans],
+  );
 
   return (
     <section className="stack" aria-labelledby="library-title">
@@ -189,7 +205,9 @@ export function DashboardPage() {
             Folders
           </h2>
           <p className="muted" style={{ margin: 0 }}>
-            Group documents for quick access.
+            Group documents, flashcards, quizzes, and step plans. On a document
+            in Study, use <strong>Folders</strong> there to add the file in one
+            click.
           </p>
           {foldersError && (
             <p className="error-banner" role="alert" style={{ margin: 0 }}>
@@ -223,7 +241,8 @@ export function DashboardPage() {
 
           {!foldersLoading && folders.length === 0 && (
             <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-              No folders yet. Create one, then add documents.
+              No folders yet. Create one, then add study materials with the menus
+              below.
             </p>
           )}
 
@@ -231,104 +250,292 @@ export function DashboardPage() {
             className="stack"
             style={{ listStyle: "none", padding: 0, gap: "var(--space-2)" }}
           >
-            {folders.map((f) => (
-              <li key={f.id} className="card" style={{ padding: "var(--space-3)" }}>
-                <div
-                  className="row"
-                  style={{
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    marginBottom: "var(--space-2)",
-                  }}
-                >
-                  <strong>{f.name}</strong>
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => void removeFolder(f.id)}
+            {folders.map((f) => {
+              const hasAnything =
+                f.documentIds.length > 0 ||
+                f.deckIds.length > 0 ||
+                f.quizIds.length > 0 ||
+                f.stepPlanIds.length > 0;
+              return (
+                <li key={f.id} className="card stack" style={{ padding: "var(--space-3)", gap: "var(--space-3)" }}>
+                  <div
+                    className="row"
+                    style={{
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                    }}
                   >
-                    Delete folder
-                  </button>
-                </div>
-                {documents.length > 0 && (
-                  <div className="row" style={{ flexWrap: "wrap", alignItems: "center" }}>
-                    <label
-                      className="muted"
-                      style={{ fontSize: "0.9rem" }}
-                      htmlFor={`add-doc-${f.id}`}
+                    <strong>{f.name}</strong>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => void removeFolder(f.id)}
                     >
-                      Add document
-                    </label>
-                    <select
-                      id={`add-doc-${f.id}`}
-                      value={addDocByFolder[f.id] ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (!val) {
-                          setAddDocByFolder((prev) => ({
-                            ...prev,
-                            [f.id]: "",
-                          }));
-                          return;
-                        }
-                        void (async () => {
-                          await addDocumentToFolder(f.id, val);
-                          setAddDocByFolder((prev) => ({ ...prev, [f.id]: "" }));
-                        })();
-                      }}
-                    >
-                      <option value="">— Select —</option>
-                      {documents
-                        .filter(
-                          (d) =>
-                            !f.documentIds.includes(d.id) &&
-                            d.status !== "failed",
-                        )
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.fileName}
-                          </option>
-                        ))}
-                    </select>
+                      Delete folder
+                    </button>
                   </div>
-                )}
-                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                  {f.documentIds.map((id) => {
-                    const d = docById[id];
-                    return (
-                      <li
-                        key={id}
-                        className="row"
-                        style={{ justifyContent: "space-between", marginTop: "6px" }}
-                      >
-                        {d ? (
-                          <Link to={`/study/${id}`}>{d.fileName}</Link>
-                        ) : (
-                          <span className="muted">(removed) {id.slice(0, 6)}</span>
-                        )}
-                        {d && (
-                          <button
-                            type="button"
-                            className="button ghost"
-                            style={{ fontSize: "0.85rem" }}
-                            onClick={() =>
-                              void removeDocumentFromFolder(f.id, id)
-                            }
+
+                  <div className="stack" style={{ gap: "var(--space-2)" }}>
+                    <span className="muted" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                      Add material
+                    </span>
+                    <div className="row" style={{ flexWrap: "wrap", gap: "var(--space-2)" }}>
+                      {documents.some((d) => d.status !== "failed") && (
+                        <label className="row" style={{ gap: "var(--space-2)", alignItems: "center" }}>
+                          <span className="muted" style={{ fontSize: "0.85rem" }}>
+                            Document
+                          </span>
+                          <select
+                            key={`doc-${f.id}-${f.documentIds.join(",")}`}
+                            defaultValue=""
+                            aria-label={`Add document to ${f.name}`}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (!v) return;
+                              void addDocumentToFolder(f.id, v);
+                              e.target.selectedIndex = 0;
+                            }}
                           >
-                            Remove
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {f.documentIds.length === 0 && (
-                  <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
-                    No items in this folder.
-                  </p>
-                )}
-              </li>
-            ))}
+                            <option value="">— Document —</option>
+                            {documents
+                              .filter(
+                                (d) =>
+                                  !f.documentIds.includes(d.id) &&
+                                  d.status !== "failed",
+                              )
+                              .map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.fileName}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      )}
+                      {decks.length > 0 && (
+                        <label className="row" style={{ gap: "var(--space-2)", alignItems: "center" }}>
+                          <span className="muted" style={{ fontSize: "0.85rem" }}>
+                            Flashcards
+                          </span>
+                          <select
+                            key={`deck-${f.id}-${f.deckIds.join(",")}`}
+                            defaultValue=""
+                            aria-label={`Add flashcard deck to ${f.name}`}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (!v) return;
+                              void addDeckToFolder(f.id, v);
+                              e.target.selectedIndex = 0;
+                            }}
+                          >
+                            <option value="">— Deck —</option>
+                            {decks
+                              .filter((d) => !f.deckIds.includes(d.id))
+                              .map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  {d.title}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      )}
+                      {quizzes.length > 0 && (
+                        <label className="row" style={{ gap: "var(--space-2)", alignItems: "center" }}>
+                          <span className="muted" style={{ fontSize: "0.85rem" }}>
+                            Quiz
+                          </span>
+                          <select
+                            key={`quiz-${f.id}-${f.quizIds.join(",")}`}
+                            defaultValue=""
+                            aria-label={`Add quiz to ${f.name}`}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (!v) return;
+                              void addQuizToFolder(f.id, v);
+                              e.target.selectedIndex = 0;
+                            }}
+                          >
+                            <option value="">— Quiz —</option>
+                            {quizzes
+                              .filter((q) => !f.quizIds.includes(q.id))
+                              .map((q) => (
+                                <option key={q.id} value={q.id}>
+                                  {q.title}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      )}
+                      {stepPlans.length > 0 && (
+                        <label className="row" style={{ gap: "var(--space-2)", alignItems: "center" }}>
+                          <span className="muted" style={{ fontSize: "0.85rem" }}>
+                            Steps
+                          </span>
+                          <select
+                            key={`plan-${f.id}-${f.stepPlanIds.join(",")}`}
+                            defaultValue=""
+                            aria-label={`Add step plan to ${f.name}`}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (!v) return;
+                              void addStepPlanToFolder(f.id, v);
+                              e.target.selectedIndex = 0;
+                            }}
+                          >
+                            <option value="">— Steps —</option>
+                            {stepPlans
+                              .filter((p) => !f.stepPlanIds.includes(p.id))
+                              .map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.title}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      )}
+                    </div>
+                    {!documents.some((d) => d.status !== "failed") &&
+                      decks.length === 0 &&
+                      quizzes.length === 0 &&
+                      stepPlans.length === 0 && (
+                        <p className="muted" style={{ margin: 0, fontSize: "0.85rem" }}>
+                          Nothing to add yet. Upload a document or save items from
+                          Study — they will appear in Flashcards / Quizzes / Steps
+                          below first.
+                        </p>
+                      )}
+                  </div>
+
+                  <div className="stack" style={{ gap: "var(--space-2)" }}>
+                    <span className="muted" style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+                      In this folder
+                    </span>
+                    {f.documentIds.length > 0 && (
+                      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                        {f.documentIds.map((id) => {
+                          const d = docById[id];
+                          return (
+                            <li
+                              key={`doc-${id}`}
+                              className="row"
+                              style={{
+                                justifyContent: "space-between",
+                                marginTop: "4px",
+                              }}
+                            >
+                              {d ? (
+                                <Link to={`/study/${id}`}>{d.fileName}</Link>
+                              ) : (
+                                <span className="muted">
+                                  (missing doc) {id.slice(0, 8)}…
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                className="button ghost"
+                                style={{ fontSize: "0.85rem" }}
+                                onClick={() =>
+                                  void removeDocumentFromFolder(f.id, id)
+                                }
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {f.deckIds.length > 0 && (
+                      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                        {f.deckIds.map((id) => {
+                          const deck = deckById[id];
+                          return (
+                            <li
+                              key={`deck-${id}`}
+                              className="row"
+                              style={{
+                                justifyContent: "space-between",
+                                marginTop: "4px",
+                              }}
+                            >
+                              <span>{deck?.title ?? `Deck ${id.slice(0, 6)}…`}</span>
+                              <button
+                                type="button"
+                                className="button ghost"
+                                style={{ fontSize: "0.85rem" }}
+                                onClick={() => void removeDeckFromFolder(f.id, id)}
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {f.quizIds.length > 0 && (
+                      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                        {f.quizIds.map((id) => {
+                          const quiz = quizById[id];
+                          return (
+                            <li
+                              key={`quiz-${id}`}
+                              className="row"
+                              style={{
+                                justifyContent: "space-between",
+                                marginTop: "4px",
+                              }}
+                            >
+                              <span>{quiz?.title ?? `Quiz ${id.slice(0, 6)}…`}</span>
+                              <button
+                                type="button"
+                                className="button ghost"
+                                style={{ fontSize: "0.85rem" }}
+                                onClick={() => void removeQuizFromFolder(f.id, id)}
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {f.stepPlanIds.length > 0 && (
+                      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                        {f.stepPlanIds.map((id) => {
+                          const plan = planById[id];
+                          return (
+                            <li
+                              key={`plan-${id}`}
+                              className="row"
+                              style={{
+                                justifyContent: "space-between",
+                                marginTop: "4px",
+                              }}
+                            >
+                              <span>{plan?.title ?? `Steps ${id.slice(0, 6)}…`}</span>
+                              <button
+                                type="button"
+                                className="button ghost"
+                                style={{ fontSize: "0.85rem" }}
+                                onClick={() =>
+                                  void removeStepPlanFromFolder(f.id, id)
+                                }
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {!hasAnything && (
+                      <p className="muted" style={{ margin: 0, fontSize: "0.88rem" }}>
+                        Nothing in this folder yet.
+                      </p>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
       </div>
