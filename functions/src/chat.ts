@@ -7,6 +7,9 @@ import { GENERATION_MODEL, geminiApiKey, getGenAi } from "./geminiClient";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
 import { retrieveChunks } from "./retrieval";
 import { badRequest, requireAuth, requireOwnership } from "./errors";
+import { toFriendlyHttpsError } from "./geminiErrors";
+import { tryParseArtifact } from "./artifactParsers";
+import type { StructuredArtifact, StructuredArtifactType } from "./studyArtifacts";
 import type { DocumentRecord, StudyMode, UserProfile } from "./types";
 
 const VALID_MODES: StudyMode[] = [
@@ -37,6 +40,8 @@ interface ChatResponseShape {
   content: string;
   retrievedChunkIds: string[];
   citations: Citation[];
+  artifactType?: StructuredArtifactType;
+  artifact?: StructuredArtifact;
 }
 
 export const chatWithDocument = onCall<ChatRequest, Promise<ChatResponseShape>>(
@@ -129,18 +134,28 @@ export const chatWithDocument = onCall<ChatRequest, Promise<ChatResponseShape>>(
     });
 
     const ai = getGenAi();
-    const result = await ai.models.generateContent({
-      model: GENERATION_MODEL,
-      contents: userPrompt,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.4,
-      },
-    });
+    const generationConfig: Record<string, unknown> = {
+      systemInstruction: systemPrompt,
+      temperature: 0.4,
+    };
+    if (mode === "flashcards" || mode === "quiz" || mode === "steps") {
+      generationConfig.responseMimeType = "application/json";
+    }
+    let result;
+    try {
+      result = await ai.models.generateContent({
+        model: GENERATION_MODEL,
+        contents: userPrompt,
+        config: generationConfig as never,
+      });
+    } catch (err) {
+      throw toFriendlyHttpsError(err);
+    }
 
     const content =
       result.text?.trim() ??
       "I could not generate a response. Please try rephrasing your question.";
+    const { artifactType, artifact } = tryParseArtifact(mode, content);
 
     const userMsgRef = messagesRef.doc();
     const assistantMsgRef = messagesRef.doc();
@@ -165,6 +180,8 @@ export const chatWithDocument = onCall<ChatRequest, Promise<ChatResponseShape>>(
       retrievedChunkIds: chunks.map((c) => c.id),
       citations,
       mode,
+      artifactType: artifactType ?? null,
+      artifact: artifact ?? null,
       timestamp: FieldValue.serverTimestamp(),
     });
     batch.update(chatRef, { updatedAt: FieldValue.serverTimestamp() });
@@ -177,6 +194,8 @@ export const chatWithDocument = onCall<ChatRequest, Promise<ChatResponseShape>>(
       content,
       retrievedChunkIds: chunks.map((c) => c.id),
       citations,
+      artifactType,
+      artifact,
     };
   },
 );

@@ -62,6 +62,8 @@ function GeneralStudyView() {
         </div>
       )}
 
+      <AccessibilityToolbar />
+
       <div className="card stack" style={{ gap: "var(--space-5)" }}>
         <div className="stack" style={{ gap: "var(--space-2)" }}>
           <h2 className="visually-hidden">Add material</h2>

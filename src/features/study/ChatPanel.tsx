@@ -16,8 +16,10 @@ import { callChatWithDocument } from "@/lib/functions";
 import { useFlashcardDecks } from "@/features/library/useFlashcardDecks";
 import { useSavedQuizzes } from "@/features/library/useSavedQuizzes";
 import { useProfile } from "@/features/profile/ProfileProvider";
+import { ArtifactMessageRenderer } from "@/features/study/ArtifactRenderers";
 import type { ChatMessage } from "@/types/chat";
 import type { StudyMode } from "@/types/profile";
+import type { FlashcardsArtifact, QuizArtifact } from "@/types/studyArtifacts";
 
 const MODES: { value: StudyMode; label: string; placeholder: string }[] = [
   {
@@ -74,8 +76,8 @@ export function ChatPanel({ docId, documentTitle }: Props) {
   const [mode, setMode] = useState<StudyMode>(
     profile.studyPreferences.defaultStudyMode,
   );
-  const [chatId, setChatId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatIdByMode, setChatIdByMode] = useState<Partial<Record<StudyMode, string>>>({});
+  const [messagesByChat, setMessagesByChat] = useState<Record<string, ChatMessage[]>>({});
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +85,11 @@ export function ChatPanel({ docId, documentTitle }: Props) {
   const [saveHint, setSaveHint] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const activeChatId = chatIdByMode[mode] ?? null;
+  const messages = activeChatId ? (messagesByChat[activeChatId] ?? []) : [];
+
   useEffect(() => {
-    if (!chatId) {
-      setMessages([]);
+    if (!activeChatId) {
       return;
     }
     if (!firebaseConfigured) {
@@ -93,20 +97,19 @@ export function ChatPanel({ docId, documentTitle }: Props) {
       return;
     }
     const q = query(
-      collection(db, "documents", docId, "chats", chatId, "messages"),
+      collection(db, "documents", docId, "chats", activeChatId, "messages"),
       orderBy("timestamp", "asc"),
     );
     return onSnapshot(
       q,
       (snap) => {
         setListenerError(null);
-        setMessages(
-          sortMessages(
-            snap.docs.map(
-              (d) => ({ id: d.id, ...(d.data() as Omit<ChatMessage, "id">) }),
-            ),
+        const next = sortMessages(
+          snap.docs.map(
+            (d) => ({ id: d.id, ...(d.data() as Omit<ChatMessage, "id">) }),
           ),
         );
+        setMessagesByChat((prev) => ({ ...prev, [activeChatId]: next }));
       },
       (err) => {
         setListenerError(
@@ -114,7 +117,7 @@ export function ChatPanel({ docId, documentTitle }: Props) {
         );
       },
     );
-  }, [docId, chatId]);
+  }, [docId, activeChatId]);
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -134,13 +137,17 @@ export function ChatPanel({ docId, documentTitle }: Props) {
     setBusy(true);
     setError(null);
     try {
+      const currentChatId = chatIdByMode[mode];
       const result = await callChatWithDocument({
         docId,
-        chatId: chatId ?? undefined,
+        chatId: currentChatId,
         message: input.trim(),
         mode,
       });
-      setChatId(result.data.chatId);
+      const returnedId = result.data.chatId;
+      setChatIdByMode((prev) =>
+        prev[mode] === returnedId ? prev : { ...prev, [mode]: returnedId },
+      );
       setInput("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not get a response");
@@ -149,20 +156,14 @@ export function ChatPanel({ docId, documentTitle }: Props) {
     }
   }
 
-  async function saveFlashcardsToLibrary(assistantText: string) {
+  async function saveFlashcardsToLibrary(artifact: FlashcardsArtifact) {
     setSaveHint(null);
     const title = documentTitle?.trim() || "Document";
     try {
-      await createDeck(
-        `Flashcards · ${title}`,
-        [
-          {
-            front: "Generated in study",
-            back: assistantText.slice(0, 12000),
-          },
-        ],
-        docId,
-      );
+      if (artifact.cards.length === 0) {
+        throw new Error("No flashcards found to save.");
+      }
+      await createDeck(`Flashcards · ${title}`, artifact.cards, docId);
       setSaveHint("Flashcards saved to your library.");
       window.setTimeout(() => setSaveHint(null), 4000);
     } catch (e) {
@@ -170,11 +171,19 @@ export function ChatPanel({ docId, documentTitle }: Props) {
     }
   }
 
-  async function saveQuizToLibrary(assistantText: string) {
+  async function saveQuizToLibrary(artifact: QuizArtifact, fallbackText: string) {
     setSaveHint(null);
     const title = documentTitle?.trim() || "Document";
     try {
-      await createQuiz(`Quiz · ${title}`, assistantText, docId);
+      if ((artifact.questions ?? []).length === 0) {
+        throw new Error("No quiz questions found to save.");
+      }
+      await createQuiz(
+        `Quiz · ${title}`,
+        fallbackText,
+        docId,
+        artifact.questions,
+      );
       setSaveHint("Quiz saved to your library.");
       window.setTimeout(() => setSaveHint(null), 4000);
     } catch (e) {
@@ -192,11 +201,35 @@ export function ChatPanel({ docId, documentTitle }: Props) {
             role="tab"
             aria-selected={mode === m.value}
             className={mode === m.value ? "button" : "button secondary"}
-            onClick={() => setMode(m.value)}
+            onClick={() => {
+              if (mode === m.value) return;
+              setMode(m.value);
+              setInput("");
+              setError(null);
+              setListenerError(null);
+              setSaveHint(null);
+            }}
           >
             {m.label}
           </button>
         ))}
+        {activeChatId && (
+          <button
+            type="button"
+            className="button ghost"
+            style={{ marginLeft: "auto" }}
+            onClick={() => {
+              setChatIdByMode((prev) => ({ ...prev, [mode]: undefined }));
+              setInput("");
+              setError(null);
+              setListenerError(null);
+              setSaveHint(null);
+            }}
+            title="Start a fresh thread for this mode"
+          >
+            New thread
+          </button>
+        )}
       </div>
 
       <div
@@ -221,7 +254,19 @@ export function ChatPanel({ docId, documentTitle }: Props) {
               <span className="muted" style={{ fontSize: "0.85em" }}>
                 {m.role === "user" ? "You" : "Tutor"} · {m.mode ?? "chat"}
               </span>
-              <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
+              {m.role === "assistant" && m.artifactType ? (
+                <span className="muted" style={{ fontSize: "0.88em" }}>
+                  Interactive {m.artifactType} generated.
+                </span>
+              ) : (
+                <span style={{ whiteSpace: "pre-wrap" }}>{m.content}</span>
+              )}
+              {m.role === "assistant" && (
+                <ArtifactMessageRenderer
+                  artifactType={m.artifactType}
+                  artifact={m.artifact}
+                />
+              )}
               {(m.citations?.length ?? 0) > 0 && (
                 <span className="muted" style={{ fontSize: "0.85em" }}>
                   Sources:{" "}
@@ -234,23 +279,33 @@ export function ChatPanel({ docId, documentTitle }: Props) {
                     .join(", ")}
                 </span>
               )}
-              {m.role === "assistant" && mode === "flashcards" && (
+              {m.role === "assistant" &&
+                m.artifactType === "flashcards" &&
+                m.artifact &&
+                (m.artifact as FlashcardsArtifact).cards?.length > 0 && (
                 <div className="row" style={{ marginTop: "var(--space-2)" }}>
                   <button
                     type="button"
                     className="button secondary"
-                    onClick={() => void saveFlashcardsToLibrary(m.content)}
+                    onClick={() =>
+                      void saveFlashcardsToLibrary(m.artifact as FlashcardsArtifact)
+                    }
                   >
                     Save to library
                   </button>
                 </div>
               )}
-              {m.role === "assistant" && mode === "quiz" && (
+              {m.role === "assistant" &&
+                m.artifactType === "quiz" &&
+                m.artifact &&
+                (m.artifact as QuizArtifact).questions?.length > 0 && (
                 <div className="row" style={{ marginTop: "var(--space-2)" }}>
                   <button
                     type="button"
                     className="button secondary"
-                    onClick={() => void saveQuizToLibrary(m.content)}
+                    onClick={() =>
+                      void saveQuizToLibrary(m.artifact as QuizArtifact, m.content)
+                    }
                   >
                     Save quiz to library
                   </button>

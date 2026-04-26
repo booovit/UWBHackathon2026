@@ -4,6 +4,7 @@ import { FUNCTIONS_REGION } from "./constants";
 import { db } from "./firebaseAdmin";
 import { GENERATION_MODEL, geminiApiKey, getGenAi } from "./geminiClient";
 import { badRequest, requireAuth } from "./errors";
+import { toFriendlyHttpsError } from "./geminiErrors";
 import type { UserProfile } from "./types";
 
 interface QuickChatRequest {
@@ -60,14 +61,19 @@ export const quickChat = onCall<QuickChatRequest, Promise<QuickChatResponse>>(
       }));
 
     const ai = getGenAi();
-    const result = await ai.models.generateContent({
-      model: GENERATION_MODEL,
-      contents: buildPrompt(message, history),
-      config: {
-        systemInstruction: buildSystemPrompt(profile),
-        temperature: 0.5,
-      },
-    });
+    let result;
+    try {
+      result = await ai.models.generateContent({
+        model: GENERATION_MODEL,
+        contents: buildPrompt(message, history),
+        config: {
+          systemInstruction: buildSystemPrompt(profile),
+          temperature: 0.5,
+        },
+      });
+    } catch (err) {
+      throw toFriendlyHttpsError(err);
+    }
 
     const content =
       result.text?.trim() ??

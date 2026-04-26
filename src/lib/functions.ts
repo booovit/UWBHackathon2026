@@ -2,6 +2,7 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
 import type { Citation } from "@/types/chat";
 import type { StudyMode } from "@/types/profile";
+import type { StructuredArtifact, StructuredArtifactType } from "@/types/studyArtifacts";
 
 export interface ChatRequest {
   docId: string;
@@ -16,6 +17,8 @@ export interface ChatResponse {
   content: string;
   retrievedChunkIds: string[];
   citations: Citation[];
+  artifactType?: StructuredArtifactType;
+  artifact?: StructuredArtifact;
 }
 
 export const callChatWithDocument = httpsCallable<ChatRequest, ChatResponse>(
