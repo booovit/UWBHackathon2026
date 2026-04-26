@@ -7,6 +7,7 @@ import { useDocument } from "@/features/documents/useDocuments";
 import { useChunks } from "@/features/documents/useChunks";
 import { AccessibilityToolbar } from "@/features/reader/AccessibilityToolbar";
 import { DocumentReader } from "@/features/reader/DocumentReader";
+import { AddToFolderPanel } from "@/features/library/AddToFolderPanel";
 import { ChatPanel } from "@/features/study/ChatPanel";
 import { QuickChat } from "@/features/study/QuickChat";
 import { StudyModeSelector } from "@/features/study/StudyModeSelector";
@@ -189,6 +190,8 @@ function DocumentStudyView({ docId }: { docId: string }) {
           )}
         </div>
       </header>
+
+      <AddToFolderPanel documentId={docId} documentTitle={document.fileName} />
 
       {document.error && (
         <div className="error-banner" role="alert">

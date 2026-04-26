@@ -4,7 +4,14 @@ import type { StructuredQuizQuestion, StructuredStep } from "./studyArtifacts";
 export interface StudyFolder {
   id: string;
   name: string;
+  /** Uploaded study documents */
   documentIds: string[];
+  /** Saved flashcard decks from the library */
+  deckIds: string[];
+  /** Saved quizzes */
+  quizIds: string[];
+  /** Saved step-by-step plans */
+  stepPlanIds: string[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
