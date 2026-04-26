@@ -12,6 +12,7 @@ import { ProfilePage } from "@/routes/ProfilePage";
 import { ProfileSetupPage } from "@/routes/ProfileSetupPage";
 import { StudyPage } from "@/routes/StudyPage";
 import { ThemeToggle } from "@/features/theme/ThemeProvider";
+import axessifyLogo from "@/assets/axessify-logo.png";
 
 export function App() {
   const { profile } = useProfile();
@@ -136,8 +137,13 @@ function Header() {
   return (
     <header className="app-header">
       <Link to="/" className="brand">
-        <span className="brand-dot" aria-hidden="true" />
-        Axessify
+        <img
+          className="brand-logo"
+          src={axessifyLogo}
+          alt=""
+          aria-hidden="true"
+        />
+        <span>Axessify</span>
       </Link>
       <nav className="header-nav row" aria-label="Primary">
         <ThemeToggle />
