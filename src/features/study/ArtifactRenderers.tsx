@@ -12,6 +12,120 @@ type TextBlock =
   | { kind: "paragraph"; text: string }
   | { kind: "list"; ordered: boolean; items: string[] };
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function cleanArtifactText(value: unknown, max = 1200): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function parseJsonFromText(content: string): unknown | null {
+  const text = content.trim();
+  try {
+    return JSON.parse(text);
+  } catch {
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
+    if (fenced) {
+      try {
+        return JSON.parse(fenced.trim());
+      } catch {
+        // Fall through to bracket extraction.
+      }
+    }
+    const firstSquare = text.indexOf("[");
+    const lastSquare = text.lastIndexOf("]");
+    if (firstSquare !== -1 && lastSquare > firstSquare) {
+      try {
+        return JSON.parse(text.slice(firstSquare, lastSquare + 1));
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+function unwrapArtifactArray(parsed: unknown, ...keys: string[]): unknown[] {
+  if (Array.isArray(parsed)) return parsed;
+  const obj = asRecord(parsed);
+  if (!obj) return [];
+  for (const key of keys) {
+    if (Array.isArray(obj[key])) return obj[key] as unknown[];
+  }
+  return [];
+}
+
+function inferArtifactFromContent(
+  content: string,
+): { artifactType?: StructuredArtifactType; artifact?: unknown } {
+  const parsed = parseJsonFromText(content);
+  const items = unwrapArtifactArray(parsed, "cards", "flashcards", "questions", "quiz", "steps", "tasks", "items");
+  if (items.length === 0) return {};
+
+  const records = items.map(asRecord).filter(Boolean);
+  if (records.length === 0) return {};
+
+  const cards = records
+    .map((item, index) => {
+      const front = cleanArtifactText(item.front, 240);
+      const back = cleanArtifactText(item.back, 1200);
+      return front && back ? { id: `card-${index + 1}`, front, back } : null;
+    })
+    .filter(Boolean) as StructuredFlashcard[];
+  if (cards.length > 0) {
+    return { artifactType: "flashcards", artifact: { cards } };
+  }
+
+  const questions = records
+    .map((item, index) => {
+      const prompt = cleanArtifactText(item.prompt ?? item.question, 800);
+      const correctAnswer = cleanArtifactText(item.correctAnswer ?? item.answer, 400);
+      if (!prompt || !correctAnswer) return null;
+      const options = Array.isArray(item.options)
+        ? item.options.map((option) => cleanArtifactText(option, 300)).filter(Boolean)
+        : undefined;
+      const acceptedAnswers = Array.isArray(item.acceptedAnswers)
+        ? item.acceptedAnswers.map((answer) => cleanArtifactText(answer, 200)).filter(Boolean)
+        : undefined;
+      return {
+        id: `q-${index + 1}`,
+        kind: item.kind === "mcq" || (options?.length ?? 0) >= 2 ? "mcq" : "written",
+        prompt,
+        options: options && options.length >= 2 ? options : undefined,
+        correctAnswer,
+        acceptedAnswers: acceptedAnswers && acceptedAnswers.length > 0 ? acceptedAnswers : undefined,
+        explanation: cleanArtifactText(item.explanation ?? item.rationale, 900) || undefined,
+      } satisfies StructuredQuizQuestion;
+    })
+    .filter(Boolean) as StructuredQuizQuestion[];
+  if (questions.length > 0) {
+    return { artifactType: "quiz", artifact: { questions } };
+  }
+
+  const steps = records
+    .map((item, index) => {
+      const instruction = cleanArtifactText(
+        item.instruction ?? item.description ?? item.text ?? item.body,
+        900,
+      );
+      if (!instruction) return null;
+      return {
+        id: `step-${index + 1}`,
+        title: cleanArtifactText(item.title ?? item.heading ?? item.name, 220) || undefined,
+        instruction,
+      };
+    })
+    .filter(Boolean) as StepsArtifact["steps"];
+  if (steps.length > 0) {
+    return { artifactType: "steps", artifact: { steps } };
+  }
+
+  return {};
+}
+
 function cleanInlineText(value: string): string {
   return value
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
@@ -90,6 +204,17 @@ function parseTextResponse(content: string): TextBlock[] {
 }
 
 export function TextResponseRenderer({ content }: { content: string }) {
+  const inferred = inferArtifactFromContent(content);
+  if (inferred.artifactType) {
+    return (
+      <ArtifactMessageRenderer
+        artifactType={inferred.artifactType}
+        artifact={inferred.artifact}
+        compact
+      />
+    );
+  }
+
   const blocks = parseTextResponse(content);
 
   if (blocks.length === 0) {

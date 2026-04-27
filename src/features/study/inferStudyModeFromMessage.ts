@@ -12,6 +12,8 @@ const HINTS: { mode: ArtifactMode; re: RegExp }[] = [
   { mode: "flashcards", re: /\bmake flashcards?\b/i },
   { mode: "flashcards", re: /\bcreate flashcards?\b/i },
   { mode: "flashcards", re: /\bgenerate flashcards?\b/i },
+  { mode: "flashcards", re: /\bgive me flashcards?\b/i },
+  { mode: "flashcards", re: /\bturn (?:this|that|it|.+?) into flashcards?\b/i },
   { mode: "flashcards", re: /\bflashcards?\s+(?:from|for|on|about)\b/i },
   { mode: "quiz", re: /\bmake (?:a )?quiz\b/i },
   { mode: "quiz", re: /\bcreate (?:a )?quiz\b/i },
