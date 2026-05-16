@@ -278,11 +278,19 @@ Firebase Console -> Authentication -> Settings -> Authorized domains
 ## Repo Map
 
 - `src/`: React frontend.
+- `src/app/`: top-level app shell and providers.
+- `src/assets/`: static images and icons.
+- `src/features/auth/`: Firebase Auth flows and guest session handling.
+- `src/features/documents/`: document upload, status, and processing UI.
 - `src/features/study/`: chat, study modes, artifact renderers.
 - `src/features/reader/`: document reader and accessibility toolbar.
 - `src/features/library/`: folders, flashcards, quizzes.
 - `src/features/profile/`: profile and accessibility preferences.
+- `src/features/theme/`: theme toggle and high-contrast mode.
+- `src/lib/`: shared utilities and Firebase client setup.
 - `src/routes/`: page routes.
+- `src/styles/`: global styles and accessibility CSS.
+- `src/types/`: shared TypeScript types.
 - `functions/src/`: Firebase Functions, Gemini, document processing, artifact parsing.
 - `firestore.rules`: Firestore security rules.
 - `storage.rules`: Storage security rules.
