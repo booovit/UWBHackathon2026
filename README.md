@@ -320,3 +320,7 @@ Firebase Console -> Authentication -> Settings -> Authorized domains
 - Production Gemini secrets live in Google Secret Manager.
 - Node 20 is the expected runtime for Functions.
 - The frontend bundle currently builds successfully but may show a Vite chunk-size warning.
+
+## License
+
+Axessify is released under the MIT License. See `LICENSE` for the full text.
