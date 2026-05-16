@@ -1,6 +1,6 @@
 # Axessify
 
-Axessify is an accessibility-first AI study platform. It lets students chat with an AI tutor, upload course materials, generate study artifacts, and personalize the reading experience with supports for dyslexia, ADHD, low vision, and different study workflows.
+Axessify is an accessibility-first AI study platform. It lets students chat with an AI tutor, upload course materials, generate study artifacts, and personalize the reading experience with support for dyslexia, ADHD, low vision, and different study workflows.
 
 ## Current Features
 
@@ -113,7 +113,7 @@ The Library page includes:
 
 ### Backend
 
-- Firebase Cloud Functions Gen 2.
+- Firebase Cloud Functions (Gen 2).
 - Firebase Admin SDK.
 - Gemini generation and embeddings through server-side Functions only.
 - Firestore rules and indexes.
