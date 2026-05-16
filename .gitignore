@@ -31,6 +31,10 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
+env
+
+# Secrets / downloads
+secret.download
 
 # Firebase build and deployment files
 /firebase-debug.log
